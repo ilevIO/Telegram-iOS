@@ -107,7 +107,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private let contentContainer: ASDisplayNode
     public let titleContainerView: PortalSourceView
-    public let titleTextNode: ImmediateAnimatedCountLabelNode
+    public let titleTextNode: ImmediateAnimatedHeaderTitleLabelNode // ImmediateAnimatedCountLabelNode
     public let titleLeftIconNode: ASImageNode
     public let titleRightIconNode: ASImageNode
     public let titleCredibilityIconView: ComponentHostView<Empty>
@@ -163,7 +163,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             if let titleContent = self.titleContent {
                 let titleTheme = self.hasEmbeddedTitleContent ? defaultDarkPresentationTheme : self.theme
                 
-                var segments: [AnimatedCountLabelNode.Segment] = []
+                var segments: [AnimatedHeaderTitleLabelNode.Segment] = [] // [AnimatedCountLabelNode.Segment] = []
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
                 var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
@@ -626,7 +626,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         self.contentContainer = ASDisplayNode()
         
         self.titleContainerView = PortalSourceView()
-        self.titleTextNode = ImmediateAnimatedCountLabelNode()
+        self.titleTextNode = ImmediateAnimatedHeaderTitleLabelNode() // ImmediateAnimatedCountLabelNode()
         
         self.titleLeftIconNode = ASImageNode()
         self.titleLeftIconNode.isLayerBacked = true

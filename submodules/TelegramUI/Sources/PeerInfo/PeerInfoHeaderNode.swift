@@ -2088,7 +2088,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let avatarOverlayNode: PeerInfoEditingAvatarOverlayNode
     let titleNodeContainer: ASDisplayNode
     let titleNodeRawContainer: ASDisplayNode
-    let titleNode: MultiScaleTextNode
+    let titleNode: MultiScaleTextNodeExpandable
     let titleCredibilityIconView: ComponentHostView<Empty>
     var credibilityIconSize: CGSize?
     let titleExpandedCredibilityIconView: ComponentHostView<Empty>
@@ -2154,7 +2154,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.titleNodeContainer = ASDisplayNode()
         self.titleNodeRawContainer = ASDisplayNode()
-        self.titleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
+        self.titleNode = MultiScaleTextNodeExpandable(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.titleNode.displaysAsynchronously = false
         
         self.titleCredibilityIconView = ComponentHostView<Empty>()
@@ -2754,8 +2754,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallTitleString, constrainedSize: titleConstrainedSize)
+            TitleNodeStateRegular: MultiScaleTextStateExpandable(attributedText: titleString, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextStateExpandable(attributedText: smallTitleString, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.titleNode.accessibilityLabel = titleString.string
         
