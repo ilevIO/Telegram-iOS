@@ -159,7 +159,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                 contentSize.width += effectiveSegmentWidth
                 contentSize.height = max(contentSize.height, layout.size.height)
                 remainingSize.width = max(0.0, remainingSize.width - min(layout.size.width, remainingSize.width))
-                if layout.truncated || layout.size.width > remainingSize.width {
+                if layout.truncated || remainingSize.width == 0 {
                     isTruncated = true
                 }
             }
@@ -221,6 +221,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                         if isTruncated {
+                            let gradientInset: CGFloat = 0
                             let gradientRadius: CGFloat = 30
                             let textMaskLayer = CALayer()
                             
@@ -229,12 +230,12 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             // TODO: Probably something else with RTL
                             if layout.hasRTL {
                                 solidPartLayer.frame = CGRect(
-                                    origin: CGPoint(x: textNode.bounds.width - effectiveSegmentWidth + gradientRadius, y: 0),
-                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                                    origin: CGPoint(x: textNode.bounds.width - effectiveSegmentWidth + gradientRadius - gradientInset, y: 0),
+                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius + gradientInset, height: textNode.bounds.height))
                             } else {
                                 solidPartLayer.frame = CGRect(
                                     origin: .zero,
-                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius + gradientInset, height: textNode.bounds.height))
                             }
                             textMaskLayer.addSublayer(solidPartLayer)
                             
@@ -243,11 +244,11 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             if layout.hasRTL {
                                 gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
                                 gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
-                                gradientLayer.frame = CGRect(x: textNode.bounds.width - effectiveSegmentWidth, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                                gradientLayer.frame = CGRect(x: textNode.bounds.width - effectiveSegmentWidth - gradientInset, y: 0, width: gradientRadius, height: textNode.bounds.height)
                             } else {
                                 gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
                                 gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-                                gradientLayer.frame = CGRect(x: effectiveSegmentWidth - gradientRadius, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                                gradientLayer.frame = CGRect(x: effectiveSegmentWidth - gradientRadius + gradientInset, y: 0, width: gradientRadius, height: textNode.bounds.height)
                             }
                             textMaskLayer.addSublayer(gradientLayer)
                             

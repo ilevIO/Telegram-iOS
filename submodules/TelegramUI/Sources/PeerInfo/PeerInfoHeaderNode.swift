@@ -3355,7 +3355,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let overlayTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpanded) {
                 let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: overlayTitleNode.layer)
                 let titleMask = CAShapeLayer()
-                let maskPath = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
+                let maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
                 titleMask.path = maskPath.cgPath
                 titleMask.fillColor = UIColor.black.cgColor
                 titleMask.frame = overlayTitleNode.layer.bounds
@@ -3366,7 +3366,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: backgroundTitleNode.layer)
                     // Invert
                     let darkTitleLayer = backgroundTitleNode.layer
-                    let path = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
+                    let path = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
                     let invertedTitleMask = CAShapeLayer()
                     invertedTitleMask.masksToBounds = false
                     path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 4200, height: 4200)))
