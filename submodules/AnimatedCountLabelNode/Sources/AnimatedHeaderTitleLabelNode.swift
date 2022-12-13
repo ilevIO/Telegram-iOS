@@ -95,7 +95,6 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
         }
         let reverseAnimationDirection = self.reverseAnimationDirection
         let alwaysOneDirection = self.alwaysOneDirection
-//        self.backgroundColor = .green.withAlphaComponent(0.4)
         return { [weak self] size, initialSegments in
             var segments: [ResolvedSegment] = []
             loop: for segment in initialSegments {
@@ -159,7 +158,6 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                 calculatedSegments[segment.key] = (layout, effectiveSegmentWidth, apply)
                 contentSize.width += effectiveSegmentWidth
                 contentSize.height = max(contentSize.height, layout.size.height)
-//                let initialConstrainedSize = remainingSize
                 remainingSize.width = max(0.0, remainingSize.width - min(layout.size.width, remainingSize.width))
                 if layout.truncated || layout.size.width > remainingSize.width {
                     isTruncated = true
@@ -212,7 +210,6 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                     let textFrame: CGRect
                     if layout.hasRTL {
                         textFrame = CGRect(x: currentOffset.x - (textNode.bounds.width - effectiveSegmentWidth), y: currentOffset.y, width: layout.size.width, height: layout.size.height)
-//                        textNode.bounds.origin.x = -(textNode.bounds.width - effectiveSegmentWidth)
                     } else {
                         textFrame = CGRect(origin: currentOffset, size: layout.size)
                     }

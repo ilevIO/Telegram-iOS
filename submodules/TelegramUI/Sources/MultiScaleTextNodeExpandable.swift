@@ -7,7 +7,6 @@ import Display
 // Currently implementing just toggled expansion (1 line, multiline)
 // TODO: move transition and layout to separate Text class (substituting ImmediateTextNode) (to reuse for ChatHeader)
 final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
-//    private let textNode: ImmediateTextNode
     var textContainerNode: ASDisplayNode {
         textContainer
     }
@@ -27,10 +26,6 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     private var prevLines: [LayoutLine]?
     
     override init() {
-//        self.textNode = ImmediateTextNode()
-//        self.textNode.maximumNumberOfLines = 1
-//        self.textNode.displaysAsynchronously = false
-        
         super.init()
         
         self.addSubnode(textContainer)
@@ -51,20 +46,13 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     // Just going straight with expansion
     func updateExpansion(progress: CGFloat, transition: ContainedViewLayoutTransition, forcedAlignment: NSTextAlignment?, shouldReweight: Bool) {
         guard var attrString = prevString, let singleLineInfo = getLinesArrayOfString(attrString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first, let prevLines else { return }
-        
-        // TODO: check title update
-//        let dummyNode = ImmediateTextNode()
-//        dummyNode.attributedText = attrString
-//        dummyNode.maximumNumberOfLines = 10
-        // TEMP
         let isAvatarExpanded = forcedAlignment == .left
         
         var totalSize = prevSize! // dummyNode.updateLayout(prevSize!)
         totalSize.width += 16
         var offsetY: CGFloat = 0
-        // Only from expanded state currently
+        // Only from expanded state
         // self.wasExpanded == true
-//        self.textContainerNode.backgroundColor = .red
         
         let expandedWeight: CGFloat = isAvatarExpanded ? UIFont.Weight.semibold.rawValue : UIFont.Weight.regular.rawValue
         let collapsedWeight: CGFloat = UIFont.Weight.semibold.rawValue
@@ -218,8 +206,6 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             singleLineTextnode?.removeFromSupernode()
             textSubnodes = []
             
-//            transition.updateAlpha(layer: singleLineFadeMask, alpha: 0, completion: nil)
-            
             singleLineFadeMask.frame.size.height = totalSize.height
         } else if !isExpanded {
             transition.updateAlpha(layer: singleLineFadeMask, alpha: 1, completion: nil)
@@ -320,14 +306,6 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         return totalSize
     }
     
-//    func updateString(_ string: NSAttributedString) {
-//        textNode.attributedText = string
-//    }
-    
-//    func updateTextLayout(size: CGSize) -> CGSize {
-//        textNode.updateLayout(size)
-//    }
-    
     private struct LayoutLine {
         let attributedString: NSAttributedString
         let isRTL: Bool
@@ -357,7 +335,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             let fontLineHeight: CGFloat = 36
             let lineCutoutOffset: CGFloat = 0
             
-            let lineConstrainedSizeWidth = textSize.width // = CGSize(width: textSize.width, height: 0)
+            let lineConstrainedSizeWidth = textSize.width
             // TODO: use proper (as in TextNode) lineOriginY
             let lineWidth = min(lineConstrainedSizeWidth, ceil(CGFloat(CTLineGetTypographicBounds(lineRef, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(lineRef))))
             let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
@@ -433,55 +411,31 @@ final class MultiScaleTextNodeExpandable: ASDisplayNode {
                         let altNode = self.stateNodes[2]!
                         if altNode.alpha == 0 {
                             altNode.alpha = 1
-                            altNode.layer.animateAlpha(from: 0, to: 1, duration: crossFadeDuration, completion: { completed in
-                                if completed {
-//                                    altNode.alpha = 1
-                                }
-                            })
+                            altNode.layer.animateAlpha(from: 0, to: 1, duration: crossFadeDuration)
                         }
                         
                         if node.value.alpha == 1 {
                             node.value.alpha = 0
-                            node.value.layer.animateAlpha(from: 1, to: 0, duration: crossFadeDuration, completion: { completed in
-                                if completed {
-//                                    node.value.alpha = 0
-                                }
-                            })
+                            node.value.layer.animateAlpha(from: 1, to: 0, duration: crossFadeDuration)
                         }
                     }
-                    //                UIView.animate(withDuration: 0.2) {
-                    //                    node.value.view.alpha = 0
-                    //                }
                 } else {
                     if node.key as? Int == 0 {
                         let altNode = self.stateNodes[2]!
                         if altNode.alpha == 1 {
                             altNode.alpha = 0
-                            altNode.layer.animateAlpha(from: 1, to: 0, duration: crossFadeDuration, completion: { completed in
-                                if completed {
-//                                    altNode.alpha = 0
-                                }
-                            })
+                            altNode.layer.animateAlpha(from: 1, to: 0, duration: crossFadeDuration)
                         }
                         
                         if node.value.alpha == 0 {
                             node.value.alpha = 1
-                            node.value.layer.animateAlpha(from: 0, to: 1, duration: crossFadeDuration, completion: { completed in
-                                if completed {
-//                                    node.value.alpha = 1
-                                }
-                            })
+                            node.value.layer.animateAlpha(from: 0, to: 1, duration: crossFadeDuration)
                         }
-                    //    let scale = altNode.textContainer.frame.width / node.value.textContainer.frame.width
-                    //    node.value.layer.setAffineTransform(.init(scaleX: progress + scale * (1 - progress), y: 1))
                     }
-                    //                UIView.animate(withDuration: 0.2) {
-                    //                    node.value.view.alpha = 1
-                    //                }
                 }
             } else {
                 self.stateNodes[0]?.alpha = lastAvatarStateIsExpanded ? 0 : 1
-                self.stateNodes[2]?.alpha = (1 - self.stateNodes[0]!.alpha)
+                self.stateNodes[2]?.alpha = (1 - (self.stateNodes[0]?.alpha ?? 0))
             }
         }
     }
@@ -496,9 +450,7 @@ final class MultiScaleTextNodeExpandable: ASDisplayNode {
         var mainLayout: MultiScaleTextLayoutExpandable?
         for (key, state) in states {
             if let node = self.stateNodes[key] {
-//                node.textNode.attributedText = state.attributedText
-//                node.updateString(state.attributedText)
-                let nodeSize = node.update(string: state.attributedText, constrainedSize: state.constrainedSize, transition: transition, isExpanded: isExpanded)//.updateTextLayout(size: state.constrainedSize)
+                let nodeSize = node.update(string: state.attributedText, constrainedSize: state.constrainedSize, transition: transition, isExpanded: isExpanded)
                 let nodeLayout = MultiScaleTextLayoutExpandable(size: nodeSize)
                 if key == mainState {
                     mainLayout = nodeLayout
@@ -511,7 +463,6 @@ final class MultiScaleTextNodeExpandable: ASDisplayNode {
             let mainBounds = CGRect(origin: CGPoint(x: -mainLayout.size.width / 2.0, y: -mainLayout.size.height / 2.0), size: mainLayout.size)
             for (key, _) in states {
                 if let node = self.stateNodes[key], let nodeLayout = result[key] {
-                    // aka set position
                     node.updateTextFrame(CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size))
                 }
             }

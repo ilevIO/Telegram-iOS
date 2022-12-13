@@ -906,7 +906,7 @@ public extension ContainedViewLayoutTransition {
     }
     
     func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, maskedCorners: CACornerMask, transitionedSize: CGSize, completion: ((Bool) -> Void)? = nil) {
-        if true || false {
+        if 2 + 2 == 4 {
             return updateCornerRadius(node: node, cornerRadius: cornerRadius, completion: completion)
         } else {
             if node.cornerRadius.isEqual(to: cornerRadius) && node.layer.maskedCorners == maskedCorners {
@@ -919,9 +919,6 @@ public extension ContainedViewLayoutTransition {
             switch self {
             case .immediate:
                 node.layer.removeAnimation(forKey: "cornerRadius")
-//                node.cornerRadius = cornerRadius
-                // TODO: ? is it always safe to work with layer?
-//                node.layer.maskedCorners = maskedCorners
                 if let completion = completion {
                     completion(true)
                 }
@@ -996,18 +993,15 @@ public extension ContainedViewLayoutTransition {
                     let nextMaskPath = makePath(cornerRadius: cornerRadius, maskedCorners: maskedCorners, bounds: .init(origin: .zero, size: transitionedSize))
                     // TODO: to the topmost mask
                     if node.layer.mask != nil {
-                        print("layer has mask \(String(describing: node.layer.mask))")
+//                        assertionFailure("layer has mask \(String(describing: node.layer.mask))")
                     }
                     let maskedLayer = node.layer.mask ?? node.layer
                     maskedLayer.mask = mask
-//                    maskedLayer.addSublayer(mask)
                     
-//                    mask.backgroundColor = UIColor.white.withAlphaComponent(0.4).cgColor
                     mask.frame = .init(origin: .zero, size: currentSize)
                     node.layer.maskedCorners = []
                     mask.animate(from: currentMaskPath as AnyObject, to: nextMaskPath as AnyObject, keyPath: "path", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                         maskedLayer.mask = nil
-//                        mask.removeFromSuperlayer()
                         node.cornerRadius = cornerRadius
                         node.layer.maskedCorners = maskedCorners
                         if let completion = completion {

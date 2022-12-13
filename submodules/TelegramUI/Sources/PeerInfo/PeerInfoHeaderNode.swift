@@ -2834,7 +2834,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
             }
             subtitleBackgroundNode.backgroundColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.1)
-            let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
+            let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]?.size ?? .zero
             var subtitleBackgroundFrame = CGRect(origin: CGPoint(), size: subtitleSize).offsetBy(dx: -subtitleSize.width * 0.5, dy: -subtitleSize.height * 0.5).insetBy(dx: -6.0, dy: -4.0)
             subtitleBackgroundFrame.size.width += 12.0
             transition.updateFrame(node: subtitleBackgroundNode, frame: subtitleBackgroundFrame)
@@ -3351,45 +3351,31 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
             }
             
-//            let smallAvatarFrame = transitionSourceAvatarFrame ?? self.avatarListNode.avatarContainerNode.frame
-//            let frameInView = CGRect(
-//                x: apparentAvatarFrame.minX - max(avatarListContainerFrame.width, smallAvatarFrame.width) / 2,
-//                y: apparentAvatarFrame.minY - avatarListContainerFrame.height / 2,
-//                width: avatarListContainerFrame.width,
-//                height: avatarListContainerFrame.height
-//            )
-            // titleExpandedSize
-           // let titleMask = CALayer()// avatarListNode.listContainerNode.layer
-//            titleMask.cornerRadius = avatarListNode.listContainerNode.layer.cornerRadius
-//            titleMask.backgroundColor = UIColor.black.cgColor
-            
-            let commonRoot = self.layer// UIApplication.shared.keyWindow!.layer
-            let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: self.titleNode.stateNode(forKey: TitleNodeStateExpanded)!.layer)//  commonRoot.convert(frameInView, from: self)
-            
-            let titleMask = CAShapeLayer()
-            let maskPath = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
-            titleMask.path = maskPath.cgPath
-            titleMask.fillColor = UIColor.black.cgColor
-            titleMask.frame = self.titleNode.stateNode(forKey: TitleNodeStateExpanded)!.layer.bounds// frameInside// self.convert(frameInView, to: self.titleNode.stateNode(forKey: TitleNodeStateExpanded))
-            
-    //        let magic20: CGFloat = 20.0
-    //        titleMask.frame.origin.x -= magic20
-    //        titleMask.frame = titleMask.frame.applying(.init(scaleX: 1 / titleScale, y: 1 / titleScale))
-            self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.layer.mask = titleMask
-//            self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.layer.backgroundColor = UIColor.green.withAlphaComponent(0.4).cgColor
-            self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.alpha = isAvatarExpanded ? 1 : 0
-            self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.alpha = isAvatarExpanded ? 1 : 0
-            // Invert
-            let darkTitleLayer = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport)!.layer
-            let path = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
-            let invertedTitleMask = CAShapeLayer()
-            invertedTitleMask.masksToBounds = false
-//            invertedTitleMask.frame = darkTitleLayer.bounds
-            path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 42000, height: 42000)))
-            invertedTitleMask.fillRule = .evenOdd
-            invertedTitleMask.path = path.cgPath
-            invertedTitleMask.fillColor = UIColor.black.cgColor
-            darkTitleLayer.mask = invertedTitleMask
+            let commonRoot = self.layer
+            if let overlayTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpanded) {
+                let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: overlayTitleNode.layer)
+                let titleMask = CAShapeLayer()
+                let maskPath = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
+                titleMask.path = maskPath.cgPath
+                titleMask.fillColor = UIColor.black.cgColor
+                titleMask.frame = overlayTitleNode.layer.bounds
+                overlayTitleNode.layer.mask = titleMask
+                overlayTitleNode.alpha = isAvatarExpanded ? 1 : 0
+                
+                if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
+//                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: backgroundTitleNode.layer)
+                    // Invert
+                    let darkTitleLayer = backgroundTitleNode.layer
+                    let path = UIBezierPath(roundedRect: frameInside, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: avatarListNode.listContainerNode.layer.cornerRadius, height: avatarListNode.listContainerNode.layer.cornerRadius))
+                    let invertedTitleMask = CAShapeLayer()
+                    invertedTitleMask.masksToBounds = false
+                    path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 4200, height: 4200)))
+                    invertedTitleMask.fillRule = .evenOdd
+                    invertedTitleMask.path = path.cgPath
+                    invertedTitleMask.fillColor = UIColor.black.cgColor
+                    darkTitleLayer.mask = invertedTitleMask
+                }
+            }
         }
         
         let buttonSpacing: CGFloat = 8.0

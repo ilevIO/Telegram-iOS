@@ -9675,20 +9675,14 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             self.headerNode.titleNode.updateExpansion(progress: 1.0 - fraction, transition: transition)
             // Cross-fading only last fractions of transition
-            let fractionThreshold: CGFloat = 0.95
+            let fractionThreshold: CGFloat = 0.97
             let progressWithinThreshold = (fraction - fractionThreshold) / (1 - fractionThreshold)
-            if fraction > fractionThreshold /*&& transition == .immediate*/ {
+            if fraction > fractionThreshold {
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - progressWithinThreshold))
                 transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: progressWithinThreshold)
-                
-//                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - progressWithinThreshold))
-//                transition.updateAlpha(node: previousStatusNode, alpha: progressWithinThreshold)
             } else {
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1)
                 transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: 0.0)
-                
-//                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1.0)
-//                transition.updateAlpha(node: previousStatusNode, alpha: 0)
             }
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))
