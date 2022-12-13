@@ -132,7 +132,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
-//        self.backgroundNode.backgroundColor = .systemPink.withAlphaComponent(0.4)// presentationData.theme.list.itemBlocksBackgroundColor
+        self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -2661,9 +2661,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if !self.isMediaOnly {
             self.addSubnode(self.headerNode.buttonsContainerNode)
         }
-//        self.addSubnode(self.headerNode)
+        self.addSubnode(self.headerNode)
         self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
-//        self.headerNode.titleNode.backgroundColor = .red.withAlphaComponent(0.4)
+        
         self.paneContainerNode.chatControllerInteraction = self.chatInterfaceInteraction
         self.paneContainerNode.openPeerContextAction = { [weak self] peer, node, gesture in
             guard let strongSelf = self, let controller = strongSelf.controller else {
@@ -8095,7 +8095,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             additive: additive,
             deviceCornerRadius: layout.deviceMetrics.screenCornerRadius
         )
-//        headerHeight += 120
+        
         if !self.isSettings && !self.state.isEditing {
             headerHeight += 71.0
         }
@@ -9635,16 +9635,11 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             previousTitleView = bottomNavigationBar.titleView
         }
         
-//        self.headerNode.backgroundColor = .blue.withAlphaComponent(0.2)
-        
         if let previousTitleView = previousTitleView as? ChatTitleView, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
-//            self.headerNode.titleNode.isTransitioning = true
             let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
-//            previousTitleView.titleTextNode.maximumNumberOfLines = 1
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
             var topHeight = topNavigationBar.backgroundNode.bounds.height
-//            self.headerNode.titleNode.
             if let iconView = previousTitleView.titleCredibilityIconView.componentView {
                 transition.updateFrame(view: iconView, frame: iconView.bounds.offsetBy(dx: (1.0 - fraction) * 8.0, dy: 0.0))
             }
@@ -9749,10 +9744,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             previousSecondaryContentNode.alpha = self.previousSecondaryContentNodeAlpha
             bottomNavigationBar.clippingNode.addSubnode(previousSecondaryContentNode)
         }
-        
-//        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView {
-//            previousTitleView.titleTextNode.maximumNumberOfLines = 10
-//        }
     }
 }
 

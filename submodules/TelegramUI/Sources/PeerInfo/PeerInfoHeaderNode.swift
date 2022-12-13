@@ -2250,9 +2250,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
         self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
         
-//        self.regularContentNode.layer.cornerRadius = 100// deviceMetrics.cornerRadius
-//        self.regularContentNode.clipsToBounds = true
-//        regularContentNode.layer.cornerRadius =  100
         self.addSubnode(self.regularContentNode)
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
@@ -3533,25 +3530,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateFrame(node: self.separatorNode, frame: separatorFrame)
         }
         
-//        var supposedAvatarNode: ASDisplayNode?
-//        supposedAvatarNode = checkedNode
-//        if let supposedAvatarNode {
-//            let avatarMaskLayer = CALayer()
-//            avatarMaskLayer.backgroundColor = UIColor.black.cgColor
-//            avatarMaskLayer.cornerRadius = deviceCornerRadius
-//            if #available(iOS 13, *) {
-//                avatarMaskLayer.cornerCurve = .continuous
-//            }
-//            supposedAvatarNode.layer.masksToBounds = true
-//            avatarMaskLayer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-//            avatarMaskLayer.frame = supposedAvatarNode.layer.bounds
-//            supposedAvatarNode.layer.mask = avatarMaskLayer
-////            supposedAvatarNode.layer.backgroundColor = UIColor.green.cgColor
-//        }
         return resolvedHeight
     }
-    
-//    lazy var checkedNode: ASDisplayNode? = nil // self.avatarListNode
     
     private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode, gesture: ContextGesture?) {
         self.performButtonAction?(buttonNode.key, gesture)
