@@ -34,106 +34,20 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         super.init()
         
         self.addSubnode(textContainer)
-//        self.addSubnode(self.textNode)
     }
     /// Update position
     func updateTextFrame(_ frame: CGRect) {
         textContainerNode.frame = frame
     }
     
-    private enum VariableFontAttribute: String, RawRepresentable {
-        case name         = "NSCTVariationAxisName"
-        case identifier   = "NSCTVariationAxisIdentifier"
-        case defaultValue = "NSCTVariationAxisDefaultValue"
-        case currentValue = "CZCTVariationAxisCurrentValue"
-        case maxValue     = "NSCTVariationAxisMaximumValue"
-        case minValue     = "NSCTVariationAxisMinimumValue"
-    }
-    
-    private struct VariationAxis {
-        var name: String
-        var identifier: NSNumber
-        var defaultValue: Double
-        var currentValue: Double
-        var minValue: Double
-        var maxValue: Double
-        
-        var variationDirection: Int
-        
-        var minMaxDelta: Double { maxValue - minValue }
-        
-        init(
-            name: String,
-            identifier: NSNumber,
-            defaultValue: Double,
-            currentValue: Double,
-            minValue: Double,
-            maxValue: Double
-        ) {
-            self.name = name
-            self.identifier = identifier
-            self.defaultValue = defaultValue
-            self.currentValue = currentValue
-            self.minValue = minValue
-            self.maxValue = maxValue
-            self.variationDirection = 1
-        }
-        
-        init(attributes: [String: Any]) {
-            let name = attributes[VariableFontAttribute.name.rawValue] as? String ?? "<no name>"
-            let identifier = attributes[VariableFontAttribute.identifier.rawValue] as? NSNumber ?? -1
-            let defaultValue = attributes[VariableFontAttribute.defaultValue.rawValue] as? Double ?? 0.0
-            let currentValue = defaultValue
-            let minValue = attributes[VariableFontAttribute.minValue.rawValue] as? Double ?? 0.0
-            let maxValue = attributes[VariableFontAttribute.maxValue.rawValue] as? Double ?? 0.0
-            self.init(
-                name: name,
-                identifier: identifier,
-                defaultValue: defaultValue,
-                currentValue: currentValue,
-                minValue: minValue,
-                maxValue: maxValue
-            )
-        }
-    }
-    
     /// UIFont.systemFont only, for other fonts use CoreText with variationAxis
     func reweightString(string: NSAttributedString, weight: CGFloat) -> NSAttributedString {
         let reweightString = NSMutableAttributedString(attributedString: string)
-        // Variable test
-//        reweightString.addAttribute(.font, value: UIFont.systemFont(ofSize: 30, weight: .init(rawValue: weight)), range: NSRange(location: 0, length: reweightString.length))
-        reweightString.addAttribute(.kern, value: 0 + 1 * weight, range: NSRange(location: 0, length: reweightString.length))
+//        reweightString.addAttribute(.kern, value: 0 + 1 * weight, range: NSRange(location: 0, length: reweightString.length))
         
         return reweightString
-        /*let size: CGFloat = 30
-        let fontName = UIFont.systemFont(ofSize: 30).fontName
-        
-        let ctFontName = UIFont.systemFont(ofSize: 30) as CTFont // CTFontCreateWithName(fontName as CFString, size, nil)
-        var fontVariationAxes: [VariationAxis] = (CTFontCopyVariationAxes(ctFontName)! as Array)
-          .map { .init(attributes: $0 as? [String: Any] ?? [:]) }
-        var weightAxis = fontVariationAxes[0]
-        let weightValue = weight // weightAxis.minValue + weightAxis.minMaxDelta * Double((weight.rawValue + 1) / 2)
-        weightAxis.currentValue = weightValue
-        fontVariationAxes[0] = weightAxis
-        let ctFontVariationAttribute = kCTFontVariationAttribute as UIFontDescriptor.AttributeName
-        let intermediateFont = UIFont(
-            descriptor: .init(
-                fontAttributes: [
-                    .name: fontName,
-                    ctFontVariationAttribute: fontVariationAxes
-                        .reduce(into: [NSNumber: Any]()) { buffer, variationAxis in
-                            buffer[variationAxis.identifier] = variationAxis.currentValue
-                        }
-                ]
-            ),
-            size: size
-        )
-        
-        reweightString.addAttribute(.font, value: intermediateFont, range: NSRange.init(location: 0, length: reweightString.length))
-        return reweightString*/
     }
 
-    // TODO: happythoughtshappythoughtshappythoughts
     // Just going straight with expansion
     func updateExpansion(progress: CGFloat, transition: ContainedViewLayoutTransition, forcedAlignment: NSTextAlignment?, shouldReweight: Bool) {
         guard var attrString = prevString, let singleLineInfo = getLinesArrayOfString(attrString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first, let prevLines else { return }
@@ -160,52 +74,27 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         }
         for (index, lineInfo) in prevLines.enumerated() {
             // TEST: dynamic weight
-            
             let reweightString = shouldReweight ? reweightString(string: lineInfo.attributedString, weight: newWeight) : lineInfo.attributedString
             
             let lineTextNode = textSubnodes[index]
             
             lineTextNode.attributedText = reweightString
             _ = lineTextNode.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
-//            let animation = CABasicAnimation(keyPath: "contents")
-//            animation.duration = 0.1
-//            let initial = lineTextNode.layer.contents
-//            animation.fromValue = lineTextNode.layer.contents
-//            UIView.transition(with: lineTextNode.view, duration: 0.1) {
-//            let copyNode = ImmediateTextNode()
-//
-//            copyNode.attributedText = reweightString
-//            _ = copyNode.updateLayout(.init(width: 100000, height: 100000))
-//
-//            let imageCopy = UIImage(cgImage: copyNode.layer.contents as! CGImage).cgImage!
-//                lineTextNode.recursivelyEnsureDisplaySynchronously(true)
-//            }
-//            lineTextNode.attributedText = reweightString
-//            _ = lineTextNode.updateLayout(.init(width: 100000, height: 10000))
-//            animation.toValue = lineTextNode.layer.contents
-//            animation.fillMode = .forwards
-//            lineTextNode.layer.contents = initial
-//            animation.completion = { xxx in
-//                print("completed: \(xxx)")
-//                if xxx {
-//                    lineTextNode.attributedText = reweightString
-//                    _ = lineTextNode.updateLayout(.init(width: 100000, height: 10000))
-//                }
-//            }
-//            lineTextNode.layer.add(animation, forKey: "contents")
             let actualSize = lineTextNode.frame // (?).updateLayout(...)
 //            lineTextNode.backgroundColor = .green
             let startIndexOfSubstring = lineInfo.lineRange.location
             var secondaryOffset: CGFloat = 0.0
-            let offsetX = floor(CTLineGetOffsetForStringIndex(singleLineInfo.ctLine, startIndexOfSubstring, &secondaryOffset))
+            var offsetX = floor(CTLineGetOffsetForStringIndex(singleLineInfo.ctLine, startIndexOfSubstring, &secondaryOffset))
             secondaryOffset = floor(secondaryOffset)
-            
+            if lineInfo.isRTL {
+                offsetX -= actualSize.width
+            }
             let collapsedFrame = CGRect(x: offsetX, y: 0, width: actualSize.width, height: actualSize.height)
             
             // Currently centered alignment only
             let containerBounds = CGRect(x: 0, y: 0, width: totalSize.width, height: totalSize.height)
             
-            let expandedFrame = expandedFrame(lineSize: actualSize.size, offsetY: offsetY, containerBounds: containerBounds, alignment: forcedAlignment ?? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment)
+            let expandedFrame = expandedFrame(lineSize: actualSize.size, offsetY: offsetY, containerBounds: containerBounds, alignment: forcedAlignment ?? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment, isRTL: lineInfo.isRTL)
             let yProgress = sqrt(1 - (progress - 1) * (progress - 1))
             let xProgress = progress// 1 - sqrt(1 - progress * progress)
             let currentProgressFrame = CGRect(
@@ -220,22 +109,37 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         }
     }
     
-    private func expandedFrame(lineSize actualSize: CGSize, offsetY: CGFloat, containerBounds: CGRect, alignment: NSTextAlignment?) -> CGRect {
+    private func expandedFrame(lineSize actualSize: CGSize, offsetY: CGFloat, containerBounds: CGRect, alignment: NSTextAlignment?, isRTL: Bool) -> CGRect {
         let lineOriginX: CGFloat
         switch alignment {
         case .left:
-            // TODO: Do we need to consider RTL here?
-            lineOriginX = 0
+            if isRTL {
+                lineOriginX = containerBounds.width - actualSize.width
+            } else {
+                lineOriginX = 0
+            }
         case .right:
-            lineOriginX = containerBounds.width - actualSize.width
+            if isRTL {
+                lineOriginX = 0
+            } else {
+                lineOriginX = containerBounds.width - actualSize.width
+            }
         case .center, .none:
             lineOriginX = (containerBounds.width - actualSize.width) / 2
         case .justified:
             lineOriginX = 0
         case .natural:
-            lineOriginX = 0
+            if isRTL {
+                lineOriginX = containerBounds.width - actualSize.width
+            } else {
+                lineOriginX = 0
+            }
         default:
-            lineOriginX = 0
+            if isRTL {
+                lineOriginX = containerBounds.width - actualSize.width
+            } else {
+                lineOriginX = 0
+            }
         }
         
         return CGRect(x: lineOriginX, y: offsetY, width: actualSize.width, height: actualSize.height)
@@ -246,6 +150,24 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     /// Currently only toggling between 1 and multiple number of lines (expanded/not expanded)
     func update(string: NSAttributedString, constrainedSize: CGSize, transition: ContainedViewLayoutTransition, isExpanded: Bool) -> CGSize {
         guard !string.string.replacingOccurrences(of: " ", with: "").isEmpty else { return .zero }
+        let shouldReset: Bool
+        if string != prevString {
+            shouldReset = true
+        } else {
+            shouldReset = false
+        }
+        
+        if shouldReset {
+            textSubnodes.removeAll()
+            prevString = nil
+            prevSize = nil
+            prevLines = nil
+            lastProgress = 0
+            currentLayout = nil
+            textContainer.subnodes?.forEach { $0.removeFromSupernode() }
+//            wasExpanded = false
+        }
+        
         let lines: [LayoutLine]
         if isExpanded {
             // Temporary (setting initial string)
@@ -287,7 +209,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         // Temporary:
         let dummyNode = ImmediateTextNode()
         dummyNode.attributedText = string
-        dummyNode.maximumNumberOfLines = 20
+        dummyNode.maximumNumberOfLines = 10
         totalSize = dummyNode.updateLayout(constrainedSize)
         // Temporary
         var singleLineTextnode: ASDisplayNode?
@@ -306,7 +228,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             dummyNode.maximumNumberOfLines = 1
             let singleLineSize = dummyNode.updateLayout(.init(width: 100000, height: 100000))
             singleLineFadeMask.frame = .init(origin: .zero, size: .init(width: max(180, singleLineSize.width), height: singleLineSize.height))
-            self.textContainerNode.layer.mask = singleLineFadeMask
+//            self.textContainerNode.layer.mask = singleLineFadeMask
         }
         do {
             singleLineFadeMask.sublayers?.forEach { $0.removeFromSuperlayer() }
@@ -325,12 +247,12 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             singleLineFadeMask.addSublayer(gradient)
         }
         var offsetY: CGFloat = 0
-        let lineSpacing: CGFloat = 0
+        let lineSpacing: CGFloat = -4
         for line in lines {
             let lineTextNode = ImmediateTextNode()
             lineTextNode.attributedText = line.attributedString
+            lineTextNode.displaysAsynchronously = false
             let actualSize = lineTextNode.updateLayout(line.frame.size)
-            print(actualSize)
             // String shouldn't change
             if let prevString = prevString, let prevSize = prevSize {
                 // Place new lineTextNode at the current position
@@ -349,12 +271,10 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
                     
                     // Currently centered alignment only
                     let containerBounds = CGRect(x: 0, y: 0, width: totalSize.width, height: totalSize.height)
-                    let expandedFrame = CGRect(x: (containerBounds.width - actualSize.width) / 2, y: offsetY/* + (totalSize.height - actualSize.height) / 2*/, width: actualSize.width, height: actualSize.height)
+                    let expandedFrame = CGRect(x: (containerBounds.width - actualSize.width) / 2, y: offsetY, width: actualSize.width, height: actualSize.height)
                     textContainer.addSubnode(lineTextNode)
                     textSubnodes.append(lineTextNode)
-                    transition.updateFrame(node: lineTextNode, frame: expandedFrame, completion: { _ in
-                        lineTextNode.frame = expandedFrame
-                    })
+                    transition.updateFrame(node: lineTextNode, frame: expandedFrame)
                     offsetY += actualSize.height + lineSpacing
                 } else if wasExpanded && !isExpanded {
                     let singleLineCTLine = line.ctLine // Only one iteration (refactor)
@@ -383,21 +303,12 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
                         }
                     }
                 } else {
-                    assertionFailure("what's up with text?")
+                    assertionFailure()
                 }
             } else {
                 lineTextNode.frame = CGRect(origin: .zero, size: actualSize)
                 textContainer.addSubnode(lineTextNode)
             }
-//            let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
-//            let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
-//            layoutSize.height += fontLineHeight + fontLineSpacing
-//            layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidt
-//
-//            // TODO: mind alignment (though not nesessary for peerInfo
-//            if line.isRTL {
-//
-//            }
         }
         if wasExpanded == isExpanded && isExpanded {
 //           updateExpansion(progress: 1, transition: transition, forcedAlignment: <#T##NSTextAlignment?#>)
@@ -406,14 +317,6 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         prevString = string
         prevLines = lines
         wasExpanded = isExpanded
-//        var isRTL = false
-//        let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
-//        if glyphRuns.count != 0 {
-//            let run = glyphRuns[0] as! CTRun
-//            if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
-//                isRTL = true
-//            }
-//        }
         return totalSize
     }
     

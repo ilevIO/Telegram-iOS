@@ -209,7 +209,13 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                     
                     let (layout, effectiveSegmentWidth, apply) = calculatedSegments[segment.key]!
                     let textNode = apply()
-                    let textFrame = CGRect(origin: currentOffset, size: layout.size)
+                    let textFrame: CGRect
+                    if layout.hasRTL {
+                        textFrame = CGRect(x: currentOffset.x - (textNode.bounds.width - effectiveSegmentWidth), y: currentOffset.y, width: layout.size.width, height: layout.size.height)
+//                        textNode.bounds.origin.x = -(textNode.bounds.width - effectiveSegmentWidth)
+                    } else {
+                        textFrame = CGRect(origin: currentOffset, size: layout.size)
+                    }
                     if textNode.frame.isEmpty {
                         // MARK: - textNode frame 1
                         textNode.frame = textFrame
@@ -223,14 +229,29 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             
                             let solidPartLayer = CALayer()
                             solidPartLayer.backgroundColor = UIColor.black.cgColor
-                            solidPartLayer.frame = CGRect(origin: .zero, size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                            // TODO: Probably something else with RTL
+                            if layout.hasRTL {
+                                solidPartLayer.frame = CGRect(
+                                    origin: CGPoint(x: textNode.bounds.width - effectiveSegmentWidth + gradientRadius, y: 0),
+                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                            } else {
+                                solidPartLayer.frame = CGRect(
+                                    origin: .zero,
+                                    size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                            }
                             textMaskLayer.addSublayer(solidPartLayer)
                             
                             let gradientLayer = CAGradientLayer()
                             gradientLayer.colors = [UIColor.black.cgColor, UIColor.clear.cgColor]
-                            gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
-                            gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-                            gradientLayer.frame = CGRect(x: effectiveSegmentWidth - gradientRadius, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                            if layout.hasRTL {
+                                gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
+                                gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
+                                gradientLayer.frame = CGRect(x: textNode.bounds.width - effectiveSegmentWidth, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                            } else {
+                                gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+                                gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+                                gradientLayer.frame = CGRect(x: effectiveSegmentWidth - gradientRadius, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                            }
                             textMaskLayer.addSublayer(gradientLayer)
                             
                             textMaskLayer.frame = textNode.layer.bounds
