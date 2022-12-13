@@ -869,7 +869,7 @@ public extension ContainedViewLayoutTransition {
                 completion(true)
             }
         case let .animated(duration, curve):
-            let previousCornerRadius = node.cornerRadius
+            let previousCornerRadius = node.layer.cornerRadius
             node.cornerRadius = cornerRadius
             node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
@@ -902,6 +902,131 @@ public extension ContainedViewLayoutTransition {
                     completion(result)
                 }
             })
+        }
+    }
+    
+    func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, maskedCorners: CACornerMask, transitionedSize: CGSize, completion: ((Bool) -> Void)? = nil) {
+        if true || false {
+            return updateCornerRadius(node: node, cornerRadius: cornerRadius, completion: completion)
+        } else {
+            if node.cornerRadius.isEqual(to: cornerRadius) && node.layer.maskedCorners == maskedCorners {
+                if let completion = completion {
+                    completion(true)
+                }
+                return
+            }
+            
+            switch self {
+            case .immediate:
+                node.layer.removeAnimation(forKey: "cornerRadius")
+//                node.cornerRadius = cornerRadius
+                // TODO: ? is it always safe to work with layer?
+//                node.layer.maskedCorners = maskedCorners
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousCornerRadius = node.cornerRadius
+                if false && maskedCorners == node.layer.maskedCorners {
+                    node.cornerRadius = cornerRadius
+                    node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+                } else {
+                    let mask = CAShapeLayer()
+                    func makePath(cornerRadius: CGFloat, maskedCorners: CACornerMask, bounds: CGRect) -> CGPath {
+                        UIBezierPath(
+                            roundedRect: bounds,
+                            byRoundingCorners: [CACornerMask.layerMinXMinYCorner, CACornerMask.layerMaxXMinYCorner, CACornerMask.layerMaxXMaxYCorner, CACornerMask.layerMinXMaxYCorner].reduce(UIRectCorner()) {
+                                if maskedCorners.contains($1) {
+                                    switch $1 {
+                                    case .layerMinXMinYCorner: return $0.union(.topLeft)
+                                    case .layerMaxXMinYCorner: return $0.union(.topRight)
+                                    case .layerMaxXMaxYCorner: return $0.union(.bottomRight)
+                                    case .layerMinXMaxYCorner: return $0.union(.bottomLeft)
+                                    default: return $0
+                                    }
+                                }
+                                return $0
+                            },
+                            cornerRadii: .init(width: cornerRadius, height: cornerRadius)
+                        ).cgPath
+                        /*
+                        let maskPath = CGMutablePath()
+                        maskPath.move(to: CGPoint(x: bounds.midX, y: bounds.minY))
+                        if maskedCorners.contains(.layerMaxXMinYCorner) {
+                            print(maskPath.currentPoint)
+                            maskPath.addArc(tangent1End: CGPoint(x: bounds.maxX, y: bounds.minY), tangent2End: CGPoint(x: bounds.maxX, y: bounds.maxY), radius: cornerRadius)
+                        } else {
+                            maskPath.addLine(to: CGPoint(x: bounds.maxX, y: bounds.minY))
+                            maskPath.addLine(to: CGPoint(x: bounds.maxX, y: bounds.midY))
+                        }
+                        
+                        if maskedCorners.contains(.layerMaxXMaxYCorner) {
+                            print(maskPath.currentPoint)
+                            maskPath.addArc(tangent1End: CGPoint(x: bounds.maxX, y: bounds.maxY), tangent2End: CGPoint(x: bounds.minX, y: bounds.maxY), radius: cornerRadius)
+                        } else {
+                            maskPath.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
+                            maskPath.addLine(to: CGPoint(x: bounds.midX, y: bounds.maxY))
+                        }
+                        
+                        if maskedCorners.contains(.layerMinXMaxYCorner) {
+                            print(maskPath.currentPoint)
+                            maskPath.addArc(tangent1End: CGPoint(x: bounds.minX, y: bounds.maxY), tangent2End: CGPoint(x: bounds.minX, y: bounds.minY), radius: cornerRadius)
+                        } else {
+                            maskPath.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
+                            maskPath.addLine(to: CGPoint(x: bounds.minX, y: bounds.midY))
+                        }
+                        
+                        if maskedCorners.contains(.layerMinXMinYCorner) {
+                            maskPath.addArc(tangent1End: CGPoint(x: bounds.minX, y: bounds.minY), tangent2End: CGPoint(x: bounds.maxX, y: bounds.minY), radius: cornerRadius)
+                        } else {
+                            maskPath.addLine(to: CGPoint(x: bounds.minX, y: bounds.minY))
+                            //                        maskPath.addLine(to: CGPoint(x: bounds.midX, y: bounds.minY))
+                        }
+                        maskPath.addLine(to: CGPoint(x: bounds.midX, y: bounds.minY))
+                        return maskPath*/
+                    }
+                    let currentSize = node.layer.bounds.size
+                    let currentMaskPath = makePath(cornerRadius: node.cornerRadius, maskedCorners: node.layer.maskedCorners, bounds: CGRect(x: 0, y: 0, width: currentSize.width, height: currentSize.height))
+                    mask.path = currentMaskPath
+                    mask.fillColor = UIColor.black.cgColor
+                    let nextMaskPath = makePath(cornerRadius: cornerRadius, maskedCorners: maskedCorners, bounds: .init(origin: .zero, size: transitionedSize))
+                    // TODO: to the topmost mask
+                    if node.layer.mask != nil {
+                        print("layer has mask \(String(describing: node.layer.mask))")
+                    }
+                    let maskedLayer = node.layer.mask ?? node.layer
+                    maskedLayer.mask = mask
+//                    maskedLayer.addSublayer(mask)
+                    
+//                    mask.backgroundColor = UIColor.white.withAlphaComponent(0.4).cgColor
+                    mask.frame = .init(origin: .zero, size: currentSize)
+                    node.layer.maskedCorners = []
+                    mask.animate(from: currentMaskPath as AnyObject, to: nextMaskPath as AnyObject, keyPath: "path", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                        maskedLayer.mask = nil
+//                        mask.removeFromSuperlayer()
+                        node.cornerRadius = cornerRadius
+                        node.layer.maskedCorners = maskedCorners
+                        if let completion = completion {
+                            completion(result)
+                        }
+                    })
+                    mask.position = .init(x: currentSize.width / 2, y: currentSize.height / 2)
+                    mask.animate(from: NSValue(cgPoint: mask.position), to: NSValue(cgPoint: .init(x: transitionedSize.width / 2, y: transitionedSize.height / 2)), keyPath: "position", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: nil)
+                    //                let maskContainer = CALayer()
+                    //                let transitionCorners = node.layer.maskedCorners.subtracting(maskedCorners)
+                    //                let mask = CALayer()
+                    //                mask.maskedCorners = transitionCorners
+                    //                mask.cornerRadius = node.layer.cornerRadius
+                    //                // TODO: mind continuous style
+                    //
+                    //
+                    mask.animate(from: NSValue(cgSize: currentSize), to: NSValue(cgSize: transitionedSize), keyPath: "bounds.size", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: nil)
+                }
+            }
         }
     }
     

@@ -81,6 +81,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
     
     public var reverseAnimationDirection: Bool = false
     public var alwaysOneDirection: Bool = false
+    public var maximumNumberOfLines: Int = 1
     
     override public init() {
         super.init()
@@ -94,7 +95,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
         }
         let reverseAnimationDirection = self.reverseAnimationDirection
         let alwaysOneDirection = self.alwaysOneDirection
-        self.backgroundColor = .green.withAlphaComponent(0.4)
+//        self.backgroundColor = .green.withAlphaComponent(0.4)
         return { [weak self] size, initialSegments in
             var segments: [ResolvedSegment] = []
             loop: for segment in initialSegments {
@@ -139,8 +140,17 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
             
             for segment in segments {
                 validKeys.append(segment.key)
-                let (layout, apply) = segmentLayouts[segment.key]!(TextNodeLayoutArguments(attributedString: segment.attributedText, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: remainingSize, alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
-                var effectiveSegmentWidth = layout.size.width
+                
+                var unlimitedWidth = false
+                if case .text = segment.key {
+                    unlimitedWidth = true
+                }
+                var constraindSize: CGSize = remainingSize
+                if unlimitedWidth {
+                    constraindSize = .init(width: .greatestFiniteMagnitude, height: remainingSize.height)
+                }
+                let (layout, apply) = segmentLayouts[segment.key]!(TextNodeLayoutArguments(attributedString: segment.attributedText, backgroundColor: nil, maximumNumberOfLines: self?.maximumNumberOfLines ?? 1, truncationType: .end, constrainedSize: constraindSize, alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
+                var effectiveSegmentWidth = min(layout.size.width, remainingSize.width)
                 if case .number = segment {
                     //effectiveSegmentWidth = ceil(effectiveSegmentWidth / 2.0) * 2.0
                 } else if segment.attributedText.string == " " {
@@ -149,8 +159,9 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                 calculatedSegments[segment.key] = (layout, effectiveSegmentWidth, apply)
                 contentSize.width += effectiveSegmentWidth
                 contentSize.height = max(contentSize.height, layout.size.height)
-                remainingSize.width = max(0.0, remainingSize.width - layout.size.width)
-                if layout.truncated {
+//                let initialConstrainedSize = remainingSize
+                remainingSize.width = max(0.0, remainingSize.width - min(layout.size.width, remainingSize.width))
+                if layout.truncated || layout.size.width > remainingSize.width {
                     isTruncated = true
                 }
             }
@@ -187,6 +198,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             animation = (-offsetY, 0.2)
                             snapshot.frame = currentTextNode.frame
                             strongSelf.layer.addSublayer(snapshot)
+                            // MARK: - textNode frame 3 (snapshot)
                             snapshot.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offsetY), duration: 0.2, removeOnCompletion: false, additive: true)
                             snapshot.animateScale(from: 1.0, to: 0.3, duration: 0.2, removeOnCompletion: false)
                             snapshot.animateAlpha(from: fromAlpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshot] _ in
@@ -199,12 +211,35 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                     let textNode = apply()
                     let textFrame = CGRect(origin: currentOffset, size: layout.size)
                     if textNode.frame.isEmpty {
+                        // MARK: - textNode frame 1
                         textNode.frame = textFrame
                         if animated, !wasEmpty, animation == nil {
                             textNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                             textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
+                        if isTruncated {
+                            let gradientRadius: CGFloat = 30
+                            let textMaskLayer = CALayer()
+                            
+                            let solidPartLayer = CALayer()
+                            solidPartLayer.backgroundColor = UIColor.black.cgColor
+                            solidPartLayer.frame = CGRect(origin: .zero, size: CGSize(width: effectiveSegmentWidth - gradientRadius, height: textNode.bounds.height))
+                            textMaskLayer.addSublayer(solidPartLayer)
+                            
+                            let gradientLayer = CAGradientLayer()
+                            gradientLayer.colors = [UIColor.black.cgColor, UIColor.clear.cgColor]
+                            gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+                            gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+                            gradientLayer.frame = CGRect(x: effectiveSegmentWidth - gradientRadius, y: 0, width: gradientRadius, height: textNode.bounds.height)
+                            textMaskLayer.addSublayer(gradientLayer)
+                            
+                            textMaskLayer.frame = textNode.layer.bounds
+                            textNode.layer.mask = textMaskLayer
+                        } else {
+                            textNode.layer.mask = nil
+                        }
                     } else if textNode.frame != textFrame {
+                        // MARK: - textNode frame 2
                         transition.updateFrameAdditive(node: textNode, frame: textFrame)
                     }
                     currentOffset.x += effectiveSegmentWidth

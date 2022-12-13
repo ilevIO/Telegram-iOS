@@ -132,7 +132,7 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, safeInsets: UIEdgeInsets, hasCorners: Bool, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
-        self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+//        self.backgroundNode.backgroundColor = .systemPink.withAlphaComponent(0.4)// presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -2661,9 +2661,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if !self.isMediaOnly {
             self.addSubnode(self.headerNode.buttonsContainerNode)
         }
-        self.addSubnode(self.headerNode)
+//        self.addSubnode(self.headerNode)
         self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
-        
+//        self.headerNode.titleNode.backgroundColor = .red.withAlphaComponent(0.4)
         self.paneContainerNode.chatControllerInteraction = self.chatInterfaceInteraction
         self.paneContainerNode.openPeerContextAction = { [weak self] peer, node, gesture in
             guard let strongSelf = self, let controller = strongSelf.controller else {
@@ -8069,7 +8069,33 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         let headerInset = sectionInset
         
-        var headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive)
+        var headerHeight = self.headerNode.update(
+            width: layout.size.width,
+            containerHeight: layout.size.height,
+            containerInset: headerInset,
+            statusBarHeight: layout.statusBarHeight ?? 0.0,
+            navigationHeight: navigationHeight,
+            isModalOverlay: layout.isModalOverlay,
+            isMediaOnly: self.isMediaOnly,
+            contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y,
+            paneContainerY: self.paneContainerNode.frame.minY,
+            presentationData: self.presentationData,
+            peer: self.data?.peer,
+            cachedData: self.data?.cachedData,
+            threadData: self.data?.threadData,
+            notificationSettings: self.data?.notificationSettings,
+            statusData: self.data?.status,
+            panelStatusData: self.customStatusData,
+            isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat,
+            isContact: self.data?.isContact ?? false,
+            isSettings: self.isSettings,
+            state: self.state,
+            metrics: layout.metrics,
+            transition: transition,
+            additive: additive,
+            deviceCornerRadius: layout.deviceMetrics.screenCornerRadius
+        )
+//        headerHeight += 120
         if !self.isSettings && !self.state.isEditing {
             headerHeight += 71.0
         }
@@ -8430,7 +8456,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 let headerInset = sectionInset
 
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, paneContainerY: self.paneContainerNode.frame.minY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, threadData: self.data?.threadData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, panelStatusData: self.customStatusData, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, metrics: layout.metrics, transition: transition, additive: additive, deviceCornerRadius: layout.deviceMetrics.screenCornerRadius)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
@@ -8978,9 +9004,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {
                     return nil
                 }
-                if isInteractive && strongSelf.controllerNode.headerNode.isAvatarExpanded {
+                /*if isInteractive && strongSelf.controllerNode.headerNode.isAvatarExpanded {
                     return nil
-                }
+                }*/
                 if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
                     return nil
                 }
@@ -9609,17 +9635,21 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             previousTitleView = bottomNavigationBar.titleView
         }
         
+//        self.headerNode.backgroundColor = .blue.withAlphaComponent(0.2)
+        
         if let previousTitleView = previousTitleView as? ChatTitleView, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
+//            self.headerNode.titleNode.isTransitioning = true
             let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
-            
+//            previousTitleView.titleTextNode.maximumNumberOfLines = 1
             self.headerNode.navigationTransition = PeerInfoHeaderNavigationTransition(sourceNavigationBar: bottomNavigationBar, sourceTitleView: previousTitleView, sourceTitleFrame: previousTitleFrame, sourceSubtitleFrame: previousStatusFrame, fraction: fraction)
             var topHeight = topNavigationBar.backgroundNode.bounds.height
-            
+//            self.headerNode.titleNode.
             if let iconView = previousTitleView.titleCredibilityIconView.componentView {
                 transition.updateFrame(view: iconView, frame: iconView.bounds.offsetBy(dx: (1.0 - fraction) * 8.0, dy: 0.0))
             }
             
+            // TODO: Adjust ChatController header title here
             if let (layout, _) = self.screenNode.validLayout {
                 let sectionInset: CGFloat
                 if layout.size.width >= 375.0 {
@@ -9629,7 +9659,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
                 let headerInset = sectionInset
                 
-                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false)
+                topHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: headerInset, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: topNavigationBar.bounds.height, isModalOverlay: layout.isModalOverlay, isMediaOnly: false, contentOffset: 0.0, paneContainerY: 0.0, presentationData: self.presentationData, peer: self.screenNode.data?.peer, cachedData: self.screenNode.data?.cachedData, threadData: self.screenNode.data?.threadData, notificationSettings: self.screenNode.data?.notificationSettings, statusData: self.screenNode.data?.status, panelStatusData: (nil, nil, nil), isSecretChat: self.screenNode.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.screenNode.data?.isContact ?? false, isSettings: self.screenNode.isSettings, state: self.screenNode.state, metrics: layout.metrics, transition: transition, additive: false, deviceCornerRadius: layout.deviceMetrics.screenCornerRadius)
             }
             
             let titleScale = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height
@@ -9643,8 +9673,19 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateSublayerTransformScale(node: previousTitleContainerNode, scale: titleScale)
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
-            transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - fraction))
-            transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: fraction)
+            self.headerNode.titleNode.updateExpansion(progress: 1.0 - fraction, transition: transition)
+            // Cross-fading only last fractions of popping
+            let fractionThreshold: CGFloat = 0.95
+            let progressWithinThreshold = (fraction - fractionThreshold) / (1 - fractionThreshold)
+            if fraction > fractionThreshold /*&& transition == .immediate*/ {
+                transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - progressWithinThreshold))
+                transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: progressWithinThreshold)
+            } else {
+                transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1)
+                transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: 0.0)
+            }
+            // TODO: add quick animation to fade previousTitleNode besides transion
+            
             transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - fraction))
             transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             
@@ -9710,6 +9751,10 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             previousSecondaryContentNode.alpha = self.previousSecondaryContentNodeAlpha
             bottomNavigationBar.clippingNode.addSubnode(previousSecondaryContentNode)
         }
+        
+//        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView {
+//            previousTitleView.titleTextNode.maximumNumberOfLines = 10
+//        }
     }
 }
 
