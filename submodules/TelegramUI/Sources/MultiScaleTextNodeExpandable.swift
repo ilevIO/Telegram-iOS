@@ -134,26 +134,15 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     }
     
     let singleLineFadeMask: CALayer = CALayer()
-    
+    var prevConstrained: CGSize?
     /// Currently only toggling between 1 and multiple number of lines (expanded/not expanded)
     func update(string: NSAttributedString, constrainedSize: CGSize, transition: ContainedViewLayoutTransition, isExpanded: Bool) -> CGSize {
         guard !string.string.replacingOccurrences(of: " ", with: "").isEmpty else { return .zero }
-        let shouldReset: Bool
+        var shouldReset: Bool = false
         if string != prevString {
             shouldReset = true
         } else {
             shouldReset = false
-        }
-        
-        if shouldReset {
-            textSubnodes.removeAll()
-            prevString = nil
-            prevSize = nil
-            prevLines = nil
-            lastProgress = 0
-            currentLayout = nil
-            textContainer.subnodes?.forEach { $0.removeFromSupernode() }
-//            wasExpanded = false
         }
         
         let lines: [LayoutLine]
@@ -166,6 +155,21 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         } else {
             // Also assuming there are no newlines in text (otherwise remove preemtively)
             lines = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+        }
+        
+        if lines.count != (prevLines?.count ?? -1) {
+            shouldReset = true
+        }
+        
+        if shouldReset {
+            textSubnodes.removeAll()
+            prevString = nil
+            prevSize = nil
+            prevLines = nil
+            lastProgress = 0
+            currentLayout = nil
+            textContainer.subnodes?.forEach { $0.removeFromSupernode() }
+//            wasExpanded = false
         }
         
 //        let stringChanged = prevString != string
@@ -303,6 +307,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         prevString = string
         prevLines = lines
         wasExpanded = isExpanded
+        prevConstrained = constrainedSize
         return totalSize
     }
     
