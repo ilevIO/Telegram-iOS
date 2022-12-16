@@ -207,7 +207,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             return ExpandableTextNodeLayout(rangeToFrame: rangeExpandedFrames, constrainedSize: constrainedSize, alignment: forcedAlignment ?? .left)
         }
     }
-    
+    var prevExpansion: CGFloat?
     func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, onlyUpdate: Bool = false, transition: ContainedViewLayoutTransition) -> CGSize {
         // TODO: store
 //        guard let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first else { return .zero }
@@ -239,8 +239,13 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 _ = textNode.updateLayout(expandedLayout.constrainedSize)
                 textFragmentsNodes.append(textNode)
                 textContainerNode.addSubnode(textNode)
+                
             }
             
+            if prevExpansion != nil {
+                // For animation
+                _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: 0, transition: .immediate)
+            }
             _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: expansionFraction, transition: transition)
         }
         let dummyNode = ImmediateTextNode()
@@ -301,7 +306,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             // TODO: decide on whether stick to node.updateLayout() size or CTLine size
             _ = textFragmentsNode.updateLayout(.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads
         }
-        
+        prevExpansion = expansionFraction
     }
 //
 //    func update(string: NSAttributedString, alignment: NSTextAlignment?, constrainedSize: CGSize, expansionFraction: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -3176,13 +3176,41 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - avatarFrame.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - avatarFrame.height / 2.0), size: avatarFrame.size)
             controlsClippingFrame = apparentAvatarFrame
         }
-        transition.updateFrameAdditive(node: self.avatarListNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
-        transition.updateFrameAdditive(node: self.avatarOverlayNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
+        
+        let adjustingPositionToFitHeight = true
+        
+        let adjustedAvatarFrame: CGRect
+        if self.isAvatarExpanded && adjustingPositionToFitHeight {
+            let rawHeight: CGFloat
+            let height: CGFloat
+            let maxY: CGFloat
+            
+            rawHeight = expandedAvatarHeight
+            height = max(navigationHeight, rawHeight - contentOffset)
+            let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
+            maxY = apparentHeight
+           
+            let avatarSize = controlsClippingFrame.size
+            let adjustedCenter = CGPoint(
+                x: apparentAvatarFrame.midX,
+                y: min(apparentAvatarFrame.midY, maxY - avatarSize.height / 2)
+            )
+            adjustedAvatarFrame = CGRect(x: adjustedCenter.x, y: adjustedCenter.y, width: 0, height: 0)
+        } else {
+            adjustedAvatarFrame = apparentAvatarFrame
+        }
+        
+        
+        transition.updateFrameAdditive(node: self.avatarListNode, frame: CGRect(origin: adjustedAvatarFrame.center, size: CGSize()))
+        transition.updateFrameAdditive(node: self.avatarOverlayNode, frame: CGRect(origin: adjustedAvatarFrame.center, size: CGSize()))
         let avatarListContainerFrame: CGRect
         let avatarListContainerScale: CGFloat
         if self.isAvatarExpanded {
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 let neutralAvatarListContainerSize = expandedAvatarListSize
+                /*let avatarListContainerSize = CGSize(
+                    width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction,
+                    height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)*/
                 let avatarListContainerSize = CGSize(
                     width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction,
                     height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
