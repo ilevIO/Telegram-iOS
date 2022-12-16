@@ -9668,7 +9668,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateSublayerTransformScale(node: previousTitleContainerNode, scale: titleScale)
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
-            self.headerNode.titleNode.updateExpansion(progress: 1.0 - fraction, transition: transition)
+//            self.headerNode.titleNode.updateExpansion(progress: 1.0 - fraction, transition: transition)
             // Cross-fading only last fractions of transition
             let fractionThreshold: CGFloat = 0.97
             let progressWithinThreshold = (fraction - fractionThreshold) / (1 - fractionThreshold)

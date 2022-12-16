@@ -213,6 +213,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                     } else {
                         textFrame = CGRect(origin: currentOffset, size: layout.size)
                     }
+                    var needsGradientUpdate = false
                     if textNode.frame.isEmpty {
                         // MARK: - textNode frame 1
                         textNode.frame = textFrame
@@ -220,6 +221,13 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             textNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                             textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
+                        needsGradientUpdate = true
+                    } else if textNode.frame != textFrame {
+                        // MARK: - textNode frame 2
+                        transition.updateFrameAdditive(node: textNode, frame: textFrame)
+                        needsGradientUpdate = true
+                    }
+                    if needsGradientUpdate {
                         if isTruncated {
                             let gradientInset: CGFloat = 0
                             let gradientRadius: CGFloat = 30
@@ -257,9 +265,6 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                         } else {
                             textNode.layer.mask = nil
                         }
-                    } else if textNode.frame != textFrame {
-                        // MARK: - textNode frame 2
-                        transition.updateFrameAdditive(node: textNode, frame: textFrame)
                     }
                     currentOffset.x += effectiveSegmentWidth
                     if let (_, currentTextNode) = strongSelf.resolvedSegments[segment.key] {

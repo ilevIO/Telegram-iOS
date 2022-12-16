@@ -12,7 +12,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     }
     var currentLayout: MultiScaleTextLayoutExpandable?
     
-    var maxNumberOfLines: Int = 1
+    var maxNumberOfLines: Int = 2
     
     var textSubnodes: [ImmediateTextNode] = []
     let textContainer: ASDisplayNode = ASDisplayNode()
@@ -136,10 +136,17 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
     let singleLineFadeMask: CALayer = CALayer()
     
     /// Currently only toggling between 1 and multiple number of lines (expanded/not expanded)
-    func update(string: NSAttributedString, constrainedSize: CGSize, transition: ContainedViewLayoutTransition, isExpanded: Bool) -> CGSize {
+    func update(
+        string: NSAttributedString,
+        constrainedSize: CGSize,
+        transition: ContainedViewLayoutTransition,
+        isExpanded: Bool
+    ) -> CGSize {
         guard !string.string.replacingOccurrences(of: " ", with: "").isEmpty else { return .zero }
+        
         let shouldReset: Bool
-        if string != prevString {
+        
+        if string != prevString || constrainedSize != prevSize {
             shouldReset = true
         } else {
             shouldReset = false
@@ -151,7 +158,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             prevSize = nil
             prevLines = nil
             lastProgress = 0
-            currentLayout = nil
+//            currentLayout = nil
             textContainer.subnodes?.forEach { $0.removeFromSupernode() }
 //            wasExpanded = false
         }
@@ -475,7 +482,7 @@ final class MultiScaleTextNodeExpandable: ASDisplayNode {
         for (_, fraction) in stateFractions {
             fractionSum += fraction
         }
-        // TODO: move
+        // TODO: moveisTransitioning
         let isAvatarExpanded = alignment == .left
         self.lastAvatarStateIsExpanded = isAvatarExpanded
         for (key, _) in stateFractions {
