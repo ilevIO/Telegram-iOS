@@ -101,11 +101,12 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         
         let solidPartLayer = CALayer()
         solidPartLayer.backgroundColor = UIColor.black.cgColor
-        // TODO: Probably something else with RTL
         if singleLineInfo.isRTL {
+            // TODO: remove safe
+            let safeSolidWidth: CGFloat = containerWidth
             solidPartLayer.frame = CGRect(
                 origin: CGPoint(x: max(containerWidth - availableWidth, gradientRadius), y: 0),
-                size: CGSize(width: availableWidth, height: height))
+                size: CGSize(width: safeSolidWidth, height: height))
         } else {
             solidPartLayer.frame = CGRect(
                 origin: .zero,
@@ -203,6 +204,8 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     /// Update position
     func updateTextFrame(_ frame: CGRect) {
         textContainerNode.frame = frame
+        debugTextNode?.frame = CGRect(x: frame.midX, y: frame.midY, width: frame.width, height: frame.height)
+        _ = debugTextNode?.updateLayout(frame.size)
     }
     
     func getExpandedLayout(string: NSAttributedString, forcedAlignment: NSTextAlignment?, constrainedSize: CGSize) -> ExpandableTextNodeLayout {
@@ -216,7 +219,37 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         if !shouldRecalculate, let currentLayout = self.currentLayout, prevAlignment == forcedAlignment {
             return currentLayout
         } else {
-            let lines = getLinesArrayOfString(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+            // let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+
+            let (textNodeLayout, _) = TextNode.asyncLayout(nil)(.init(
+                attributedString: string,
+                backgroundColor: nil,
+                minimumNumberOfLines: 0,
+                maximumNumberOfLines: maxNumberOfLines,
+                truncationType: .end,
+                constrainedSize: constrainedSize,
+                alignment: forcedAlignment ?? .left,
+                verticalAlignment: .top,
+                lineSpacing: 0,
+                cutout: nil,
+                insets: .zero,
+                lineColor: nil,
+                textShadowColor: nil,
+                textStroke: nil,
+                displaySpoilers: false,
+                displayEmbeddedItemsUnderSpoilers: false
+            ))
+            let ranges = textNodeLayout.linesRanges
+            let rects = textNodeLayout.linesRects()
+            let lines: [LayoutLine] = ranges.enumerated().map { (index, range) in
+                LayoutLine(
+                    attributedString: string.attributedSubstring(from: range),
+                    isRTL: textNodeLayout.lineIsRTL(at: index),
+                    frame: rects[index],
+                    ctLine: CTLineCreateWithAttributedString(NSAttributedString(string: "not needed")),
+                    lineRange: range
+                )
+            }
             
             var width: CGFloat = 0
             var height: CGFloat = 0
@@ -274,13 +307,18 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             textFragmentsNodes.forEach { $0.removeFromSupernode() }
             textFragmentsNodes = []
             
-            for (range, _) in expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }) {
+            for (index, (range, _)) in expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).enumerated() {
                 let substring = string.attributedSubstring(from: range)
-                let textNode = ImmediateTextNode()
+                let textNode = TextNodeFracture()// ImmediateTextNode()
+                textNode.lineIndex = index
                 textNode.displaysAsynchronously = false
                 textNode.attributedText = substring
-                textNode.maximumNumberOfLines = 1
-                
+                textNode.fullText = string
+//                textNode.textAlignment = .natural
+//                textNode.bounds.origin.y = -frame.minY
+//                textNode.bounds.size.height = frame.height
+                textNode.maximumNumberOfLines = maxNumberOfLines // 1
+//                textNode.clipsToBounds = true
                 _ = textNode.updateLayout(expandedLayout.constrainedSize)
                 textFragmentsNodes.append(textNode)
                 textContainerNode.addSubnode(textNode)
@@ -292,11 +330,19 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
             _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: expansionFraction, needsExpansionLayoutUpdate: true, transition: transition)
         }
-//        let dummyNode = ImmediateTextNode()
-//        dummyNode.attributedText = string
-//        dummyNode.maximumNumberOfLines = maxNumberOfLines
-//        let totalSize = dummyNode.updateLayout(expandedLayout.constrainedSize)
-//
+        
+        let dummyNode = ImmediateTextNode()
+        dummyNode.attributedText = string
+        dummyNode.maximumNumberOfLines = maxNumberOfLines
+        let testSize = dummyNode.updateLayout(expandedLayout.constrainedSize)
+        print(testSize)
+        dummyNode.backgroundColor = UIColor.green.withAlphaComponent(0.2)
+        dummyNode.alpha = 0.6
+        dummyNode.textAlignment = .center
+        debugTextNode?.removeFromSupernode()
+//        textContainerNode.addSubnode(dummyNode)
+        debugTextNode = dummyNode
+        
         var height: CGFloat = 0
         var width: CGFloat = 0
         for frame in expandedLayout.rangeToFrame {
@@ -305,7 +351,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
         return CGSize(width: width, height: height)// totalSize
     }
-    
+    var debugTextNode: ImmediateTextNode?
     func updateExpansion(fraction expansionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         guard let expandedLayout = currentLayout else { return }
         // TODO: store
@@ -360,7 +406,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            textFragmentsNode.backgroundColor = .red.withAlphaComponent(0.4)
             transition.updateFrame(node: textFragmentsNode, frame: currentProgressFrame)
             // TODO: decide on whether stick to node.updateLayout() size or CTLine size
-            _ = textFragmentsNode.updateLayout(.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads
+            _ = textFragmentsNode.updateLayout(CGSize(width: width, height: height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
         }
         prevExpansion = expansionFraction
     }

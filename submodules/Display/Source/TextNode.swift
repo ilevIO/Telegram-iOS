@@ -50,17 +50,17 @@ public struct TextRangeRectEdge: Equatable {
     }
 }
 
-private final class TextNodeLine {
-    let line: CTLine
-    let frame: CGRect
-    let range: NSRange
-    let isRTL: Bool
-    let strikethroughs: [TextNodeStrikethrough]
-    let spoilers: [TextNodeSpoiler]
-    let spoilerWords: [TextNodeSpoiler]
-    let embeddedItems: [TextNodeEmbeddedItem]
+/*private*/internal final class TextNodeLine {
+    fileprivate let line: CTLine
+    /*fileprivate*/internal var frame: CGRect
+    fileprivate let range: NSRange
+    fileprivate let isRTL: Bool
+    fileprivate let strikethroughs: [TextNodeStrikethrough]
+    fileprivate let spoilers: [TextNodeSpoiler]
+    fileprivate let spoilerWords: [TextNodeSpoiler]
+    fileprivate let embeddedItems: [TextNodeEmbeddedItem]
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem]) {
+    fileprivate init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem]) {
         self.line = line
         self.frame = frame
         self.range = range
@@ -72,7 +72,7 @@ private final class TextNodeLine {
     }
 }
 
-private final class TextNodeBlockQuote {
+/*private*/internal final class TextNodeBlockQuote {
     let frame: CGRect
     
     init(frame: CGRect) {
@@ -248,7 +248,7 @@ public final class TextNodeLayout: NSObject {
     public let rawTextSize: CGSize
     public let truncated: Bool
     fileprivate let firstLineOffset: CGFloat
-    fileprivate let lines: [TextNodeLine]
+    /*fileprivate let*/internal var lines: [TextNodeLine]
     fileprivate let blockQuotes: [TextNodeBlockQuote]
     fileprivate let lineColor: UIColor?
     fileprivate let textShadowColor: UIColor?
@@ -259,7 +259,7 @@ public final class TextNodeLayout: NSObject {
     public let spoilerWords: [(NSRange, CGRect)]
     public let embeddedItems: [TextNodeLayout.EmbeddedItem]
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
+    /*fileprivate*/internal init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
@@ -607,6 +607,14 @@ public final class TextNodeLayout: NSObject {
             rects.append(line.frame)
         }
         return rects
+    }
+    
+    public var linesRanges: [NSRange] {
+        lines.map { $0.range }
+    }
+    
+    public func lineIsRTL(at lineIndex: Int) -> Bool {
+        lines[lineIndex].isRTL
     }
     
     public func textRangesRects(text: String) -> [[CGRect]] {
@@ -976,7 +984,7 @@ open class TextNode: ASDisplayNode {
         }
     }
     
-    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool) -> TextNodeLayout {
+    public static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool) -> TextNodeLayout {
         if let attributedString = attributedString {
             let stringLength = attributedString.length
             
@@ -1013,6 +1021,7 @@ open class TextNode: ASDisplayNode {
             
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
+         //   CTTypesetterCreateWithAttributedStringAndOptions(<#T##string: CFAttributedString##CFAttributedString#>, <#T##options: CFDictionary?##CFDictionary?#>)
             if maybeTypesetter == nil {
                 return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
             }
@@ -1154,7 +1163,7 @@ open class TextNode: ASDisplayNode {
                     if lineRange.length == 0 {
                         break
                     }
-                    
+                    // MARK: - HERE!
                     let coreTextLine: CTLine
                     let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
@@ -1628,7 +1637,7 @@ open class TextNode: ASDisplayNode {
             
             let node = maybeNode ?? TextNode()
             
-            return (layout, {
+            return (layout, { // overridenLayout in
                 node.cachedLayout = layout
                 if updated {
                     if layout.size.width.isZero && layout.size.height.isZero {

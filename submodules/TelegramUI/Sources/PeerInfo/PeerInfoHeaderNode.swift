@@ -3447,7 +3447,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         height: titleFrame.size.height * neutralTitleScale
                     )
                 )
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (16 + xWidth / 2) : titleFrame.midX
