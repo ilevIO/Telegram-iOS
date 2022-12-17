@@ -3226,7 +3226,95 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarListContainerScale = avatarScale
         }
         transition.updateFrame(node: self.avatarListNode.listContainerNode, frame: avatarListContainerFrame)
+        if self.avatarListNode.listContainerNode.layer.mask != nil, self.avatarListNode.listContainerNode.layer.mask !== avatarTransitionMask {
+            print("kek")
+        }
         
+        class Test {
+            static var usingCustomMask = true
+        }
+        // avatarTransitionMask.removeFromSuperlayer()
+        // let mask = CAShapeLayer()
+        //avatarTransitionMask = mask
+        let maskedLayer = self.avatarListNode.listContainerNode.layer.superlayer ?? self.avatarListNode.listContainerNode.layer
+        if navigationTransition != nil {
+            let mask = avatarTransitionMask
+            mask.fillColor = UIColor.black.cgColor
+            let path = CGMutablePath()
+            let adjustedDeviceCornerRadius = deviceCornerRadius - 1
+            
+            let topRadius = max(adjustedDeviceCornerRadius * (1 - transitionFraction), self.avatarListNode.listContainerNode.cornerRadius)
+            let bottomRadius = self.avatarListNode.listContainerNode.cornerRadius
+            let pathBounds = self.avatarListNode.listContainerNode.bounds
+            path.move(to: CGPoint(x: pathBounds.midX, y: pathBounds.minY))
+            path.addArc(tangent1End: CGPoint(x: pathBounds.maxX, y: pathBounds.minY), tangent2End: CGPoint(x: pathBounds.maxX, y: pathBounds.maxY), radius: topRadius)
+            path.addArc(tangent1End: CGPoint(x: pathBounds.maxX, y: pathBounds.maxY), tangent2End: CGPoint(x: pathBounds.minX, y: pathBounds.maxY), radius: bottomRadius)
+            path.addArc(tangent1End: CGPoint(x: pathBounds.minX, y: pathBounds.maxY), tangent2End: CGPoint(x: pathBounds.minX, y: pathBounds.minY), radius: bottomRadius)
+            path.addArc(tangent1End: CGPoint(x: pathBounds.minX, y: pathBounds.minY), tangent2End: CGPoint(x: pathBounds.maxX, y: pathBounds.minY), radius: topRadius)
+            path.closeSubpath()
+            /*path.addPath(
+                UIBezierPath(
+                    roundedRect: CGRect(origin: .zero, size: CGSize(width:  self.avatarListNode.listContainerNode.bounds.width,  height: self.avatarListNode.listContainerNode.bounds.height / 2)),
+                    byRoundingCorners: [.topLeft, .topRight],
+                    cornerRadii: CGSize(
+                        width: max(adjustedDeviceCornerRadius * (1 - transitionFraction), self.avatarListNode.listContainerNode.cornerRadius),
+                        height: max(adjustedDeviceCornerRadius * (1 - transitionFraction), self.avatarListNode.listContainerNode.cornerRadius))
+                ).cgPath)
+            
+            let overlayOffset: CGFloat = 1
+            path.addPath(
+                UIBezierPath(
+                    roundedRect: CGRect(origin: .zero, size: CGSize(width:  self.avatarListNode.listContainerNode.bounds.width,  height: self.avatarListNode.listContainerNode.bounds.height / 2 + overlayOffset))
+                        .offsetBy(dx: 0, dy: self.avatarListNode.listContainerNode.bounds.height / 2 - overlayOffset),
+                    byRoundingCorners: [.bottomLeft, .bottomRight],
+                    cornerRadii: CGSize(
+                        width: self.avatarListNode.listContainerNode.cornerRadius,
+                        height: self.avatarListNode.listContainerNode.cornerRadius)
+                ).cgPath)
+            */
+            // path.addRoundedRect(in: CGRect(origin: .zero, size: CGSize(width:  self.avatarListNode.listContainerNode.bounds.width,  height: self.avatarListNode.listContainerNode.bounds.height / 2)).offsetBy(dx: 0, dy: self.avatarListNode.listContainerNode.bounds.height / 2), cornerWidth: self.avatarListNode.listContainerNode.cornerRadius, cornerHeight: self.avatarListNode.listContainerNode.cornerRadius)
+            //        path.addPath(UIBezierPath(roundedRect: self.avatarListNode.listContainerNode.bounds, byRoundingCorners: [.topLeft, .topRight], cornerRadii: deviceCornerRadius * (1 - transitionFraction) + 1.0 / 2.0 * (transitionFraction * transitionSourceAvatarFrame.width + expandedAvatarHeight * (1 - transitionFraction)) * transitionFraction))
+            if transition.isAnimated || avatarTransitionMask.superlayer == nil, case let .animated(duration, curve) = transition {
+                //            let animationInfo = transition.animation()
+                //            let pathAnimation = CABasicAnimation(keyPath: "path")
+                
+                let animation = mask.makeAnimation(from: mask.path, to: path, keyPath: "path", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: { _ in })
+                animation.fillMode = .forwards
+                //            pathAnimation.fromValue = mask.path
+                //            pathAnimation.toValue = path
+                //            pathAnimation.fillMode = .forwards
+                //            pathAnimation.timingFunction = animationInfo?.timingFunction ?? CAMediaTimingFunction(name: .easeInEaseOut)
+                //            pathAnimation.beginTime = animationInfo?.beginTime ?? 0
+                //            pathAnimation.speed = animationInfo?.speed ?? pathAnimation.speed
+                //            pathAnimation.valueFunction = animationInfo?.valueFunction ?? pathAnimation.valueFunction
+                //            pathAnimation.duration = animationInfo?.duration ?? 0.25
+                mask.path = path
+                mask.add(animation, forKey: "path")
+            } else {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                mask.path = path
+                CATransaction.commit()
+            }
+            
+            if !transition.isAnimated || avatarTransitionMask.superlayer == nil {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                ////            if avatarTransitionMask.superlayer == nil {
+                ////
+                ////            }
+            }
+            transition.updateFrame(layer: avatarTransitionMask, frame: maskedLayer.convert(self.avatarListNode.listContainerNode.layer.bounds, from: self.avatarListNode.listContainerNode.layer))
+            //        avatarTransitionMask.frame = maskedLayer.convert(self.avatarListNode.listContainerNode.layer.bounds, from: self.avatarListNode.listContainerNode.layer)
+            if !transition.isAnimated || avatarTransitionMask.superlayer == nil {
+                CATransaction.commit()
+            }
+            if Test.usingCustomMask {
+                maskedLayer.mask = avatarTransitionMask
+            }
+        } else {
+            maskedLayer.mask = nil // Quick fix: TODO: replace path with arcs
+        }
 //        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.avatarListNode.listContainerNode.bounds.height - 70.0), size: CGSize(width: self.avatarListNode.listContainerNode.bounds.width, height: 70.0)))
         
         let innerScale = avatarListContainerFrame.height / expandedAvatarListSize.height
@@ -3420,7 +3508,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitleOffset = titleCollapseFraction * -2.0
                 }
                 
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction), containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 rawTitleFrame = CGRect(
@@ -3657,7 +3745,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         return resolvedHeight
     }
-    
+    var avatarTransitionMask = CAShapeLayer()
     private func buttonPressed(_ buttonNode: PeerInfoHeaderButtonNode, gesture: ContextGesture?) {
         self.performButtonAction?(buttonNode.key, gesture)
     }

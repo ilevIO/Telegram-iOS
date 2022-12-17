@@ -214,7 +214,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                     } else {
                         textFrame = CGRect(origin: currentOffset, size: layout.size)
                     }
-                    var needsGradientUpdate = false
+                    var needsGradientUpdate = true// false
                     if textNode.frame.isEmpty {
                         // MARK: - textNode frame 1
                         textNode.frame = textFrame
