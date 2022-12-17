@@ -28,7 +28,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
     
     var gradientFadeMask = CALayer()
     
-    func update(strings: [AnyHashable: NSAttributedString], mainState: AnyHashable?, constrainedSize: CGSize, textExpansionFraction: CGFloat, isAvatarExpanded: Bool, transition: ContainedViewLayoutTransition) -> [AnyHashable: MultiScaleTextLayout] {
+    func update(strings: [AnyHashable: NSAttributedString], mainState: AnyHashable?, constrainedSize: CGSize, textExpansionFraction: CGFloat, isAvatarExpanded: Bool, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> [AnyHashable: MultiScaleTextLayout] {
         var commonExpandedLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout? = nil
         
         var mainLayout: MultiScaleTextLayout?
@@ -44,7 +44,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
 //                assertionFailure("check")
                 continue
             }
-            let size = node.updateIfNeeded(string: string, expandedLayout: layout, expansionFraction: textExpansionFraction, transition: transition)
+            let size = node.updateIfNeeded(string: string, expandedLayout: layout, expansionFraction: textExpansionFraction, needsExpansionLayoutUpdate: needsExpansionLayoutUpdate, transition: transition)
             if key == mainState {
                 mainLayout = MultiScaleTextLayout(size: size)
             }
@@ -69,7 +69,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         return result
     }
     
-    func updateFading(availableWidth: CGFloat, height: CGFloat) {
+    func updateFading(availableWidth: CGFloat, containerWidth: CGFloat, height: CGFloat) {
         gradientFadeMask.removeFromSuperlayer()
         gradientFadeMask = .init()
         // Pass fade side from AnimatedHeaderLabelNode
@@ -89,7 +89,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
         gradientFadeMask.addSublayer(gradientLayer)
         gradientFadeMask.masksToBounds = false
-        gradientFadeMask.frame = CGRect(x: -availableWidth / 2, y: -height / 2, width: availableWidth + fadeRadius, height: height)
+        gradientFadeMask.frame = CGRect(x: -containerWidth / 2, y: -height / 2, width: availableWidth + fadeRadius, height: height)
         self.layer.mask = gradientFadeMask
     }
 //
@@ -208,7 +208,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
     }
     var prevExpansion: CGFloat?
-    func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, onlyUpdate: Bool = false, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> CGSize {
         // TODO: store
 //        guard let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first else { return .zero }
         
@@ -224,7 +224,9 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         prevAlignment = expandedLayout.alignment
         
         if !shouldRemake/*, currentLayout == expandedLayout*/ { // let currentLayout = self.currentLayout,  {
-            updateExpansion(fraction: expansionFraction, transition: transition)
+            if needsExpansionLayoutUpdate {
+                updateExpansion(fraction: expansionFraction, transition: transition)
+            }
         } else {
             textFragmentsNodes.forEach { $0.removeFromSupernode() }
             textFragmentsNodes = []
@@ -239,14 +241,13 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 _ = textNode.updateLayout(expandedLayout.constrainedSize)
                 textFragmentsNodes.append(textNode)
                 textContainerNode.addSubnode(textNode)
-                
             }
             
             if prevExpansion != nil {
                 // For animation
-                _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: 0, transition: .immediate)
+                _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: 0, needsExpansionLayoutUpdate: true, transition: .immediate)
             }
-            _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: expansionFraction, transition: transition)
+            _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: expansionFraction, needsExpansionLayoutUpdate: true, transition: transition)
         }
         let dummyNode = ImmediateTextNode()
         dummyNode.attributedText = string
@@ -280,11 +281,14 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             } else {
                 let startIndexOfSubstring = sortedFrames[index].key.location// lineInfo.lineRange.location
                 var secondaryOffset: CGFloat = 0.0
-                let offsetX = floor(CTLineGetOffsetForStringIndex(singleLineInfo.ctLine, startIndexOfSubstring, &secondaryOffset))
+                var offsetX = floor(CTLineGetOffsetForStringIndex(singleLineInfo.ctLine, startIndexOfSubstring, &secondaryOffset))
                 secondaryOffset = floor(secondaryOffset)
                 
                 let actualSize = expandedFrame.size
                 
+                if singleLineInfo.isRTL {
+                    offsetX -= actualSize.width
+                }
 //                    if line.isRTL {
 //                        offsetX -= actualSize.width
 //                    }

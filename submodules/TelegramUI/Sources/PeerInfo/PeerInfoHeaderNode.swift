@@ -2795,6 +2795,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             constrainedSize: titleConstrainedSize,
             textExpansionFraction: 1.0,
             isAvatarExpanded: isAvatarExpanded,
+            needsExpansionLayoutUpdate: navigationTransition == nil, // || isFirstTime
             transition: transition
         )
         /*self.titleNode.updateLayout(states: [
@@ -3304,6 +3305,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
+        let offsetBehindRightButton: CGFloat = 44
         if !titleSize.width.isZero && !titleSize.height.isZero {
             let rawTitleFrame: CGRect
             if self.navigationTransition != nil {
@@ -3357,8 +3359,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         height: titleFrame.size.height * neutralTitleScale
                     )
                 )
-                
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width, height: titleFrame.height)
+                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (16 + xWidth / 2) : titleFrame.midX
@@ -3367,17 +3368,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     y: transitionFraction * (transitionSourceTitleFrame.midY) + (1.0 - transitionFraction) * (titleFrame.midY - titleFrame.height / 2 + singleLineTitleHeight / 2)
                 )
                 
+                let someTitleOriginX = rawTitleFrame.minX// titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0
+//                let testSourceTitleFrame = navigationTransition!.sourceTitleView.frame
                 let navBarTitleTransitionFrame = CGRect(
                     origin: CGPoint(
-                        x: /*titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,*/ (singleLineTitleCenter.x) - xWidth * neutralTitleScale / 2.0,
+                        x: transitionSourceTitleFrame.minX * transitionFraction + (1.0 - transitionFraction) * (/*singleLineTitleFrame.minX * transitionFraction + */someTitleOriginX /** (1.0 - transitionFraction)*/),//*titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,*/ /*(singleLineTitleCenter.x) - xWidth * neutralTitleScale / 2.0*/,
                         y: (singleLineTitleCenter.y) - singleSize.height * neutralTitleScale / 2.0),
                     size: CGSize(
-                        width: xWidth * neutralTitleScale,
+                        width: transitionSourceTitleFrame.width * transitionFraction + (1.0 - transitionFraction) * xWidth * neutralTitleScale,
                         height: singleSize.height * neutralTitleScale
                     )
                 )
                 print(rawTitleFrame)
-                self.titleNodeRawContainer.frame = navBarTitleTransitionFrame
+                self.titleNodeRawContainer.frame = navBarTitleTransitionFrame// navBarTitleTransitionFrame
                 transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()))
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 
@@ -3403,7 +3406,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, transition: transition)
                 }
                 
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width, height: titleFrame.height)
 //                let singleLineTitleHeight: CGFloat = 35
                 
                 let titleScale: CGFloat
@@ -3418,6 +3420,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitleOffset = titleCollapseFraction * -2.0
                 }
                 
+                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 rawTitleFrame = CGRect(
                     x: singleLineTitleFrame.minX * currentTitleCollapseFraction + titleFrame.minX * (1.0 - currentTitleCollapseFraction),
@@ -3425,7 +3429,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     width: singleLineTitleFrame.width * currentTitleCollapseFraction + titleFrame.width * (1.0 - currentTitleCollapseFraction),
                     height: singleLineTitleFrame.height * currentTitleCollapseFraction + titleFrame.height * (1.0 - currentTitleCollapseFraction)
                 ).offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0) // titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 self.titleNodeRawContainer.frame = rawTitleFrame
 //                self.titleNodeRawContainer.backgroundColor = .red
                 let singleLineOffset = singleLineTitleFrame.minX - titleFrame.minX
