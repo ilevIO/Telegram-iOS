@@ -104,10 +104,15 @@ public class TextNodeFracture: ImmediateTextNode {
         let _ = apply()
         // TODO: redo whole layout update with parameters thing
         if let lineIndex = self.lineIndex, _layout !== prevCachedLayout {
-            let line = _layout.lines[lineIndex]
-            line.frame.origin.y = 28.333333333 // 0
-            self.cachedLayout?.lines = [line]
-            self.setNeedsDisplay()
+            if lineIndex < _layout.lines.count {
+                let line = _layout.lines[lineIndex]
+                line.frame.origin.y = 28.333333333 // 0
+                self.cachedLayout?.lines = [line]
+            } else {
+                for _ in 0..<20 {
+                    print("WARNING \(String(describing: self.attributedText?.string))")
+                }
+            }
         }
         let layout = self.cachedLayout ?? _layout
         if layout.numberOfLines > 1 {
