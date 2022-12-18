@@ -3408,11 +3408,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //            let availableWidth = titleConstrainedSize.width / titleScale - offsetBehindRightButton * (collapseFraction)
             let gradientRadius: CGFloat = 36
             let symmetricCollapsedMaxX: CGFloat
-            if isAvatarExpanded {
-                symmetricCollapsedMaxX = min(transitionSourceTitleFrame.width / 0.7, singleLineSize.width)
-            } else {
-                symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 2)
-            }
+//            if isAvatarExpanded {
+//                symmetricCollapsedMaxX = min(transitionSourceTitleFrame.width / 0.7, singleLineSize.width)
+//            } else {
+            symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
+//            }
             let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
@@ -3499,7 +3499,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
-                let singleMidX = isAvatarExpanded ? (16 + xWidth / 2) : titleFrame.midX
+                let singleMidX = isAvatarExpanded ? (0/*16*/ + xWidth / 2) : titleFrame.midX
                 let singleLineTitleCenter = CGPoint(
                     x: transitionFraction * (transitionSourceTitleFrame.midX) + (1.0 - transitionFraction) * singleMidX,
                     y: transitionFraction * (transitionSourceTitleFrame.midY) + (1.0 - transitionFraction) * (titleFrame.midY - titleFrame.height / 2 + singleLineTitleHeight / 2)
