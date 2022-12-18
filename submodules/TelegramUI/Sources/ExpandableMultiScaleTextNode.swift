@@ -62,7 +62,8 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         if let mainLayout = mainLayout {
             let mainBounds = CGRect(origin: CGPoint(x: -mainLayout.size.width / 2.0, y: -mainLayout.size.height / 2.0), size: mainLayout.size)
             for (key, _) in states {
-                if let node = self.textSubnodes[key], let nodeLayout = result[key] {
+                if let node = self.textSubnodes[key]/*, let nodeLayout = result[key]*/ {
+                    let nodeLayout = mainLayout
                     node.updateTextFrame(CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size))
                 }
             }
@@ -116,8 +117,10 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         let solidPartLayer = CALayer()
         solidPartLayer.backgroundColor = UIColor.black.cgColor
         if singleLineInfo.isRTL {
+            // TODO: fix rtl layout offsets
+            let adjustForRTL: CGFloat = 12
             // TODO: remove safe
-            let safeSolidWidth: CGFloat = containerWidth
+            let safeSolidWidth: CGFloat = containerWidth + adjustForRTL
             solidPartLayer.frame = CGRect(
                 origin: CGPoint(x: max(containerWidth - availableWidth, gradientRadius), y: 0),
                 size: CGSize(width: safeSolidWidth, height: height))
@@ -199,6 +202,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         let rangeToFrame: [NSRange: CGRect]
         let constrainedSize: CGSize
         let alignment: NSTextAlignment
+        let isTruncated: Bool
 //        let currentSize: CGSize
 //        let expandedSize: CGSize
 //        let collapsedSize: CGSize
@@ -244,8 +248,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         if !shouldRecalculate, let currentLayout = self.currentLayout, prevAlignment == forcedAlignment {
             return currentLayout
         } else {
-            // let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
-
+            
             let (textNodeLayout, _) = TextNode.asyncLayout(nil)(.init(
                 attributedString: string,
                 backgroundColor: nil,
@@ -271,11 +274,16 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     attributedString: string.attributedSubstring(from: range),
                     isRTL: textNodeLayout.lineIsRTL(at: index),
                     frame: rects[index],
-                    ctLine: CTLineCreateWithAttributedString(NSAttributedString(string: "not needed")),
-                    lineRange: range
+                    ctLine: textNodeLayout.lines[index].line,
+                    lineRange: range,
+                    glyphRuns: CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as! [CTRun],
+                    glyphRunsRanges: (CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as! [CTRun]).map {
+                        let cfRange = CTRunGetStringRange($0)
+                        return NSRange(location: cfRange.location, length: cfRange.length)
+                    }
                 )
             }
-            
+            // let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
             var width: CGFloat = 0
             var height: CGFloat = 0
             for line in lines {
@@ -284,28 +292,79 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
             let totalSize = CGSize(width: width, height: height)
             let containerBounds = CGRect(x: 0, y: 0, width: totalSize.width, height: totalSize.height)
-            
+            var prevLineIsRTL = false
             var offsetY: CGFloat = 0
             var rangeExpandedFrames = [NSRange: CGRect]()
             let lineSpacing: CGFloat = 0
-            
-            for line in lines {
+            let typeSetterWasRTL = lines.first?.isRTL == true
+            for (lineIndex, line) in lines.enumerated() {
                 let actualSize = line.frame.size
-//                let actualSize = lineTextNode.updateLayout(line.frame.size)
-                let attrString = line.attributedString
+                // if line.isRTL {
+                var glyphRunIndex = 0
+                var glyphOffset: CGFloat = 0
+                let lineString = line.attributedString
+                let lineFrame: CGRect = self.expandedFrame(
+                    lineSize: CGSize(width: min(actualSize.width, containerBounds.width), height: actualSize.height), // actualSize.size,
+                    offsetY: offsetY,
+                    containerBounds: containerBounds,
+                    alignment: forcedAlignment ?? (lineString.length > 0 ? (lineString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment : .left),
+                    isRTL: line.isRTL
+                )
                 
-                let expandedFrame = expandedFrame(
+                let sequence: [EnumeratedSequence<[NSRange]>.Element]
+                if line.isRTL && !typeSetterWasRTL {
+                    sequence = line.glyphRunsRanges.enumerated().sorted(by: { $0.element.location < $1.element.location })// .map { $0 }// .map({ $0 })
+                } else {
+                    sequence = line.glyphRunsRanges.enumerated().map { $0 }// .map({ $0 })
+                }
+                for (index, glyphRunRange) in sequence {
+//                    let cfRange = glyphRun// CTRunGetStringRange(glyphRun)
+                    let glyphRun = line.glyphRuns[index]
+                    let absoluteRange = glyphRunRange// NSRange(location: cfRange.location, length: cfRange.length)
+//                    let substring = string.attributedSubstring(from: range)
+                    var secondaryOffset: CGFloat = 0//; CTRunGetStatus(glyphRun)
+                    var xOffset = CTLineGetOffsetForStringIndex(line.ctLine, absoluteRange.location - line.lineRange.location, &secondaryOffset)
+                    
+                    // TODO: maybe remove trailing whitespaces
+                    let glyphWidth = CTRunGetTypographicBounds(glyphRun, CFRangeMake(0, 0), nil, nil, nil)
+                    
+                    if line.isRTL && lineIndex > 0 && !prevLineIsRTL {//*CTRunGetStatus(glyphRun).contains(.rightToLeft)*/ /*&& absoluteRange.location - line.lineRange.location == 0*/ {
+                        xOffset = line.frame.width - glyphOffset - glyphWidth// line.frame.width - secondaryOffset
+                    } else if line.isRTL {
+                        xOffset = glyphOffset
+                    } else {
+                        xOffset = glyphOffset
+                    }
+                     glyphOffset += glyphWidth
+                    
+                    let expandedFrame = CGRect(x: xOffset + lineFrame.origin.x, y: offsetY, width: glyphWidth, height: actualSize.height)/*expandedFrame(
+                        lineSize: CGSize(width: min(actualSize.width, containerBounds.width), height: actualSize.height), // actualSize.size,
+                        offsetY: offsetY,
+                        containerBounds: containerBounds,
+                        alignment: forcedAlignment ?? (attrString.length > 0 ? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment : .left),
+                        isRTL: line.isRTL
+                    )*/
+//                    let absoluteRange = NSRange(location: line.lineRange.location + rangeInLine.location, length: rangeInLine.length)
+                    rangeExpandedFrames[absoluteRange] = expandedFrame
+                    glyphRunIndex += absoluteRange.length
+                }
+                print(glyphRunIndex)
+//                let actualSize = lineTextNode.updateLayout(line.frame.size)
+               /* let attrString = line.attributedString
+                
+                let expandedFrame: CGRect = expandedFrame(
                     lineSize: CGSize(width: min(actualSize.width, containerBounds.width), height: actualSize.height), // actualSize.size,
                     offsetY: offsetY,
                     containerBounds: containerBounds,
                     alignment: forcedAlignment ?? (attrString.length > 0 ? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment : .left),
                     isRTL: line.isRTL
                 )
-                offsetY += expandedFrame.height + lineSpacing
-                rangeExpandedFrames[line.lineRange] = expandedFrame
+                rangeExpandedFrames[line.lineRange] = expandedFrame*/
+                offsetY += /*expandedFrame*/actualSize.height + lineSpacing
+                prevLineIsRTL = line.isRTL
             }
             
-            return ExpandableTextNodeLayout(rangeToFrame: rangeExpandedFrames, constrainedSize: constrainedSize, alignment: forcedAlignment ?? .left)
+            return ExpandableTextNodeLayout(rangeToFrame: rangeExpandedFrames, constrainedSize: constrainedSize, alignment: forcedAlignment ?? .left, isTruncated: textNodeLayout.truncated)
         }
     }
     var prevExpansion: CGFloat?
@@ -331,18 +390,33 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         } else {
             textFragmentsNodes.forEach { $0.removeFromSupernode() }
             textFragmentsNodes = []
+//            let lines = getLinesArrayOfString(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+//
+//            for line in lines {
+//                for glyphRun in line.glyphRuns {
+//                    let range = CTRunGetStringRange(glyphRun)
+//                    let substring = string.attributedSubstring(from: range)
+//                    var secondaryOffset: CGFloat = 0
+//                    let xOffset = CTLineGetOffsetForStringIndex(line.ctLine, range.location, &secondaryOffset)
+//
+//                }
+//            }
             
             for (index, (range, _)) in expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).enumerated() {
-                let substring = string.attributedSubstring(from: range)
-                let textNode = TextNodeFracture()// ImmediateTextNode()
-                textNode.lineIndex = index
+                var substring = string.attributedSubstring(from: range)
+                if expandedLayout.isTruncated, index == expandedLayout.rangeToFrame.count - 1/*, string.length > 0*/ {
+                    substring = NSAttributedString(string: "\u{2026}", attributes: string.length > 0 ? string.attributes(at: 0, effectiveRange: nil) : [:])// NSAttributedString(string: substring.string + "\u{2026}", attributes: substring.length > 0 ? substring.attributes(at: 0, effectiveRange: nil) : [:])
+                }
+                let textNode = ImmediateTextNode()// TextNodeFracture()// ImmediateTextNode()
+//                textNode.lineIndex = index
                 textNode.displaysAsynchronously = false
                 textNode.attributedText = substring
-                textNode.fullText = string
+                print(index)
+//                textNode.fullText = string
 //                textNode.textAlignment = .natural
 //                textNode.bounds.origin.y = -frame.minY
 //                textNode.bounds.size.height = frame.height
-                textNode.maximumNumberOfLines = maxNumberOfLines // 1
+                textNode.maximumNumberOfLines = 1// maxNumberOfLines // 1
 //                textNode.clipsToBounds = true
                 _ = textNode.updateLayout(expandedLayout.constrainedSize)
                 textFragmentsNodes.append(textNode)
@@ -356,25 +430,27 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             _ = updateIfNeeded(string: string, expandedLayout: expandedLayout, expansionFraction: expansionFraction, needsExpansionLayoutUpdate: true, transition: transition)
         }
         
-        let dummyNode = ImmediateTextNode()
-        dummyNode.attributedText = string
-        dummyNode.maximumNumberOfLines = maxNumberOfLines
-        let testSize = dummyNode.updateLayout(expandedLayout.constrainedSize)
-        print(testSize)
-        dummyNode.backgroundColor = UIColor.green.withAlphaComponent(0.2)
-        dummyNode.alpha = 0.6
-        dummyNode.textAlignment = .center
-        debugTextNode?.removeFromSupernode()
+//        let dummyNode = ImmediateTextNode()
+//        dummyNode.attributedText = string
+//        dummyNode.maximumNumberOfLines = maxNumberOfLines
+//        let testSize = dummyNode.updateLayout(expandedLayout.constrainedSize)
+//        print(testSize)
+//        dummyNode.backgroundColor = UIColor.green.withAlphaComponent(0.2)
+//        dummyNode.alpha = 0.6
+//        dummyNode.textAlignment = .center
+//        debugTextNode?.removeFromSupernode()
 //        textContainerNode.addSubnode(dummyNode)
-        debugTextNode = dummyNode
+//        debugTextNode = dummyNode
         
-        var height: CGFloat = 0
+        let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
         var width: CGFloat = 0
-        for frame in expandedLayout.rangeToFrame {
-            width = max(width, frame.value.width)
-            height += frame.value.height
+        var height: CGFloat = 0
+        for line in lines {
+            width = max(width, min(line.frame.width, expandedLayout.constrainedSize.width))
+            height += line.frame.height
         }
-        return CGSize(width: width, height: height)// totalSize
+        let totalSize = CGSize(width: width, height: height)
+        return totalSize// CGSize(width: width, height: height)// totalSize
     }
     var debugTextNode: ImmediateTextNode?
     func updateExpansion(fraction expansionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -384,32 +460,42 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
               let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
         else { return }
         
-        let sortedFrames = expandedLayout.rangeToFrame.sorted(by: { $0.key.lowerBound < $1.key.lowerBound }).map { $0 }
+        let sortedFrames = expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).map { $0 }
         
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-        for line in sortedFrames {
-            width = max(width, line.value.width)
-            height += line.value.height
-        }
+//        var width: CGFloat = 0
+//        var height: CGFloat = 0
+//        for line in sortedFrames {
+//            width = max(width, line.value.width)
+//            height += line.value.height
+//        }
+        let sizeTextnode = ImmediateTextNode()
+        sizeTextnode.displaysAsynchronously = false
+        sizeTextnode.attributedText = string
+        sizeTextnode.maximumNumberOfLines = self.maxNumberOfLines
+        let totalSize = sizeTextnode.updateLayout(expandedLayout.constrainedSize)
 //            let totalSize = CGSize(width: width, height: height)
-        
-        for (index, textFragmentsNode) in self.textFragmentsNodes.enumerated() {
+        print(totalSize)
+        // for (index, textFragmentsNode) in self.textFragmentsNodes.enumerated() {
+        for (index, (range, frame)) in sortedFrames.enumerated() {
+            let textFragmentsNode = self.textFragmentsNodes[index]
             let currentProgressFrame: CGRect
-            let expandedFrame = sortedFrames[index].value // expandedFrame(lineSize: actualSize.size, offsetY: offsetY, containerBounds: containerBounds, alignment: forcedAlignment ?? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment, isRTL: lineInfo.isRTL)
-            
+            let expandedFrame = frame // sortedFrames[index].value // expandedFrame(lineSize: actualSize.size, offsetY: offsetY, containerBounds: containerBounds, alignment: forcedAlignment ?? (attrString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment, isRTL: lineInfo.isRTL)
+//            textFragmentsNode.backgroundColor = .blue.withAlphaComponent(0.4)
             if expansionFraction == 1 {
                 currentProgressFrame = expandedFrame
             } else {
-                let startIndexOfSubstring = sortedFrames[index].key.location// lineInfo.lineRange.location
+                let startIndexOfSubstring = range.location// sortedFrames[index].key.location// lineInfo.lineRange.location
                 var secondaryOffset: CGFloat = 0.0
                 var offsetX = floor(CTLineGetOffsetForStringIndex(singleLineInfo.ctLine, startIndexOfSubstring, &secondaryOffset))
                 secondaryOffset = floor(secondaryOffset)
-                
+                offsetX = secondaryOffset
                 let actualSize = expandedFrame.size
                 
-                if singleLineInfo.isRTL {
-                    offsetX -= actualSize.width
+                if let glyphRangeIndex = singleLineInfo.glyphRunsRanges.firstIndex(where: { $0.contains(range.location) }),
+                   CTRunGetStatus(singleLineInfo.glyphRuns[glyphRangeIndex]).contains(.rightToLeft) {
+                   
+//                   singleLineInfo.glyphRuns.contains(where: { CTRunGetStatus($0).contains(.rightToLeft) }) {
+                    offsetX = secondaryOffset - expandedFrame.width// -= actualSize.width
                 }
 //                    if line.isRTL {
 //                        offsetX -= actualSize.width
@@ -431,7 +517,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            textFragmentsNode.backgroundColor = .red.withAlphaComponent(0.4)
             transition.updateFrame(node: textFragmentsNode, frame: currentProgressFrame)
             // TODO: decide on whether stick to node.updateLayout() size or CTLine size
-            _ = textFragmentsNode.updateLayout(CGSize(width: width, height: height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
+            _ = textFragmentsNode.updateLayout(currentProgressFrame.size)// CGSize(width: totalSize.width, height: totalSize.height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
         }
         prevExpansion = expansionFraction
     }
@@ -484,6 +570,8 @@ struct LayoutLine {
     let frame: CGRect
     let ctLine: CTLine
     let lineRange: NSRange
+    let glyphRuns: [CTRun]
+    let glyphRunsRanges: [NSRange]
 }
 
 func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize, maxNumberOfLines: Int = .max) -> [LayoutLine] {
@@ -514,11 +602,11 @@ func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize, maxNu
         } else {
             firstLines = []
         }
-        
+        // MARK: maybe here runs get broken
         let lastLines = getLinesArrayOfString(lastString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
         let lastLine = lastLines.first
             .flatMap { line in
-                return LayoutLine(attributedString: line.attributedString, isRTL: line.isRTL, frame: line.frame, ctLine: line.ctLine, lineRange: NSRange(location: lastVisibleRange.location, length: attStr.length - lastVisibleRange.location))
+                return LayoutLine(attributedString: line.attributedString, isRTL: line.isRTL, frame: line.frame, ctLine: line.ctLine, lineRange: NSRange(location: lastVisibleRange.location, length: attStr.length - lastVisibleRange.location), glyphRuns: line.glyphRuns, glyphRunsRanges: line.glyphRunsRanges.map { NSRange(location: $0.location + lastVisibleRange.location, length: $0.length) })
             }
             .map { [$0] } ?? lastLines
         return firstLines + lastLine
@@ -550,8 +638,11 @@ func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize, maxNu
                     isRTL = true
                 }
             }
-            
-            linesArray.append(LayoutLine(attributedString: lineString, isRTL: isRTL, frame: lineFrame, ctLine: lineRef, lineRange: range))
+            let ctRuns = glyphRuns.map { $0 as! CTRun }
+            linesArray.append(LayoutLine(attributedString: lineString, isRTL: isRTL, frame: lineFrame, ctLine: lineRef, lineRange: range, glyphRuns: ctRuns, glyphRunsRanges: ctRuns.map {
+                let range = CTRunGetStringRange($0)
+                return NSRange(location: range.location, length: range.length)
+            }))
         }
         return linesArray
     }

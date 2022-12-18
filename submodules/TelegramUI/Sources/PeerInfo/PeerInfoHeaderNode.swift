@@ -2784,8 +2784,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let textSideInset: CGFloat = 36.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
-        
-        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
+        let expandedExtraWidth: CGFloat = isAvatarExpanded ? 8 : 0
+        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0) + expandedExtraWidth, height: .greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.update(
             states: [
@@ -2932,7 +2932,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarCenter = avatarFrame.center
         }
         
-        let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
+        let titleSize = titleNodeLayout[isAvatarExpanded ? TitleNodeStateExpanded : TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
@@ -2948,9 +2948,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         // MARK: - single line
         let singleLineDummy = ImmediateTextNode()
-        singleLineDummy.attributedText = smallTitleString
-        let singleLineSize = singleLineDummy.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
-        )
+        singleLineDummy.attributedText = isAvatarExpanded ? smallTitleString : titleString
+        let singleLineSize = singleLineDummy.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
         
         let singleLineTitleFrame: CGRect
         if self.isAvatarExpanded {
@@ -3307,23 +3306,25 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let innerDeltaY = (avatarListContainerFrame.height - expandedAvatarListSize.height) / 2.0
         transition.updateSublayerTransformScale(node: self.avatarListNode.listContainerNode, scale: innerScale)
         
-        if transitionFraction > 0 && self.avatarListNode.listContainerNode.topShadowNode.layer.opacity > 0 {
-            // Temporary solution to smoothen ugly transition
-            let fadeAnimation = CABasicAnimation(keyPath: "opacity")
-            fadeAnimation.fromValue = self.avatarListNode.listContainerNode.topShadowNode.layer.opacity
-            fadeAnimation.toValue = 0
-            fadeAnimation.duration = 0.2
-            self.avatarListNode.listContainerNode.topShadowNode.layer.opacity = 0
-            fadeAnimation.fillMode = .forwards
-            self.avatarListNode.listContainerNode.topShadowNode.layer.add(fadeAnimation, forKey: "opacity")
-        } else if transitionFraction == 0 && self.avatarListNode.listContainerNode.topShadowNode.layer.opacity == 0 {
-            let fadeAnimation = CABasicAnimation(keyPath: "opacity")
-            fadeAnimation.fromValue = self.avatarListNode.listContainerNode.topShadowNode.layer.opacity
-            fadeAnimation.toValue = 1
-            fadeAnimation.duration = 0.36
-            self.avatarListNode.listContainerNode.topShadowNode.layer.opacity = 1
-            fadeAnimation.fillMode = .forwards
-            self.avatarListNode.listContainerNode.topShadowNode.layer.add(fadeAnimation, forKey: "opacity")
+        if 2 * 2 == 4 {
+            if transitionFraction > 0 && self.avatarListNode.listContainerNode.topShadowNode.layer.opacity > 0 {
+                // Temporary solution to smoothen ugly transition
+                let fadeAnimation = CABasicAnimation(keyPath: "opacity")
+                fadeAnimation.fromValue = self.avatarListNode.listContainerNode.topShadowNode.layer.opacity
+                fadeAnimation.toValue = 0
+                fadeAnimation.duration = 0.2
+                self.avatarListNode.listContainerNode.topShadowNode.layer.opacity = 0
+                fadeAnimation.fillMode = .forwards
+                self.avatarListNode.listContainerNode.topShadowNode.layer.add(fadeAnimation, forKey: "opacity")
+            } else if transitionFraction == 0 && self.avatarListNode.listContainerNode.topShadowNode.layer.opacity == 0 {
+                let fadeAnimation = CABasicAnimation(keyPath: "opacity")
+                fadeAnimation.fromValue = self.avatarListNode.listContainerNode.topShadowNode.layer.opacity
+                fadeAnimation.toValue = 1
+                fadeAnimation.duration = 0.36
+                self.avatarListNode.listContainerNode.topShadowNode.layer.opacity = 1
+                fadeAnimation.fillMode = .forwards
+                self.avatarListNode.listContainerNode.topShadowNode.layer.add(fadeAnimation, forKey: "opacity")
+            }
         }
 //        bottomShadowNode
         let bottomShadowHeight: CGFloat = titleSize.height == 0 ? 70.0 : titleSize.height + 35
@@ -3402,10 +3403,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
                 collapseFraction = currentTitleCollapseFraction
             }
-            
+//            let titleScale: CGFloat = 0.7
+//            let titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
+//            let verticalTransitionFinalWidth = singleLineTitleFrame.width - (singleLineTitleFrame.width - titleSize.width) / 2// (titleConstrainedSize.width / titleScale - offsetBehindRightButton) - 40
+//            let test_realTitleWidth = titleNode.stateNode(forKey: PeerHeaderTitleState.thin)?.subnodes?.reduce(0) { $0 + $1.frame.width }
+            // print(test_realTitleWidth!)
 //            let titleScale = (1.0 - collapseFraction) * 1.0 + collapseFraction * titleMinScale
 //            let availableWidth = titleConstrainedSize.width / titleScale - offsetBehindRightButton * (collapseFraction)
-            let finalTitleWidth = navigationTransition != nil ? transitionSourceTitleFrame.width / 0.7 : titleFrame.width// min(singleLineSize.width / titleScale, availableWidth)
+            let gradientRadius: CGFloat = 36
+            let symmetricCollapsedMaxX: CGFloat
+            if isAvatarExpanded {
+                symmetricCollapsedMaxX = transitionSourceTitleFrame.width / 0.7
+            } else {
+                symmetricCollapsedMaxX = titleFrame.midX + min(singleLineSize.width, titleConstrainedSize.width + gradientRadius) / 2
+            }
+            let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
@@ -3551,16 +3563,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction), containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
+                let collapsedMinX = titleFrame.midX - min(singleLineSize.width, titleConstrainedSize.width + 36 / 2) / 2
+                
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 rawTitleFrame = CGRect(
-                    x: singleLineTitleFrame.minX * currentTitleCollapseFraction + titleFrame.minX * (1.0 - currentTitleCollapseFraction),
+                    x: /*singleLineTitleFrame.minX*/collapsedMinX * currentTitleCollapseFraction + titleFrame.minX * (1.0 - currentTitleCollapseFraction),
                     y: (titleFrame.minY/* + titleOffsetForCenteredSingleLine*/) * currentTitleCollapseFraction + titleFrame.minY * (1.0 - currentTitleCollapseFraction),
                     width: singleLineTitleFrame.width * currentTitleCollapseFraction + titleFrame.width * (1.0 - currentTitleCollapseFraction),
                     height: singleLineTitleFrame.height * currentTitleCollapseFraction + titleFrame.height * (1.0 - currentTitleCollapseFraction)
                 ).offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0) // titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
                 self.titleNodeRawContainer.frame = rawTitleFrame
 //                self.titleNodeRawContainer.backgroundColor = .red
-                let singleLineOffset = singleLineTitleFrame.minX - titleFrame.minX
+                let singleLineOffset = collapsedMinX - titleFrame.minX
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 
                 let subtitleFrameForCollapsedTitle = CGRect(x: subtitleFrame.minY, y: singleLineTitleFrame.maxY + 1.0, width: subtitleFrame.width, height: subtitleFrame.height)
@@ -3603,31 +3617,50 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             let commonRoot = self.layer
-            if let overlayTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpanded) {
-                func applyAvatarMask(to layer: CALayer) {
-                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
-                    let titleMask = CAShapeLayer()
-                    let maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
-                    titleMask.path = maskPath.cgPath
-                    titleMask.fillColor = UIColor.black.cgColor
-                    titleMask.frame = layer.bounds
-                    layer.mask = titleMask
-                    layer.opacity = isAvatarExpanded ? 1 : 0
+            var usesActualAvatarMask: Bool { false }
+            func applyAvatarMask(to layer: CALayer) {
+                let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.layer.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
+                let titleMask = CAShapeLayer()
+                let maskPath: CGPath
+                if usesActualAvatarMask, let avatarMaskPath = avatarTransitionMask.path {
+                    let bounds = avatarMaskPath.boundingBox
+                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX, y: -bounds.minY)
+                    maskPath = avatarMaskPath.mutableCopy(using: &offsetTransform)!
+                } else {
+                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius).cgPath
+                }
+                titleMask.path = maskPath
+                titleMask.fillColor = UIColor.black.cgColor
+                titleMask.frame = layer.bounds
+                layer.mask = titleMask
+                layer.opacity = isAvatarExpanded ? 1 : 0
 //                    overlayTitleNode.alpha = isAvatarExpanded ? 1 : 0
+            }
+            
+            func applyInvertedAvatarMask(to layer: CALayer) {
+                let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
+                let maskPath: CGPath
+                if usesActualAvatarMask, let avatarMaskPath = avatarTransitionMask.path {
+                    let bounds = avatarMaskPath.boundingBox
+                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX, y: -bounds.minY)
+                    maskPath = avatarMaskPath.mutableCopy(using: &offsetTransform)!
+                } else {
+                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius).cgPath
                 }
                 
-                func applyInvertedAvatarMask(to layer: CALayer) {
-                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
-                    let path = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
-                    let invertedTitleMask = CAShapeLayer()
-                    invertedTitleMask.masksToBounds = false
-                    path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 4200, height: 4200)))
-                    invertedTitleMask.fillRule = .evenOdd
-                    invertedTitleMask.path = path.cgPath
-                    invertedTitleMask.fillColor = UIColor.black.cgColor
-                    layer.mask = invertedTitleMask
-                }
-                
+                let path = UIBezierPath(cgPath: maskPath) // (roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
+                let invertedTitleMask = CAShapeLayer()
+                invertedTitleMask.masksToBounds = false
+                path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 4200, height: 4200)))
+                invertedTitleMask.fillRule = .evenOdd
+                invertedTitleMask.path = path.cgPath
+                invertedTitleMask.fillColor = UIColor.black.cgColor
+                layer.mask = invertedTitleMask
+            }
+//            applyAvatarMask(to: self.avatarListNode.listContainerNode.topShadowNode.layer)
+//            applyAvatarMask(to: self.avatarListNode.listContainerNode.bottomShadowNode.layer)
+            
+            if let overlayTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpanded) {
                 applyAvatarMask(to: overlayTitleNode.layer)
                 applyAvatarMask(to: self.titleExpandedCredibilityIconView.layer)
                 

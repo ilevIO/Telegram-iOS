@@ -50,8 +50,8 @@ public struct TextRangeRectEdge: Equatable {
     }
 }
 
-/*private*/internal final class TextNodeLine {
-    fileprivate let line: CTLine
+/*private*/public final class TextNodeLine {
+    /*fileprivate*/public let line: CTLine
     /*fileprivate*/internal var frame: CGRect
     fileprivate let range: NSRange
     fileprivate let isRTL: Bool
@@ -248,7 +248,7 @@ public final class TextNodeLayout: NSObject {
     public let rawTextSize: CGSize
     public let truncated: Bool
     fileprivate let firstLineOffset: CGFloat
-    /*fileprivate let*/internal var lines: [TextNodeLine]
+    /*fileprivate let*/public var lines: [TextNodeLine]
     fileprivate let blockQuotes: [TextNodeBlockQuote]
     fileprivate let lineColor: UIColor?
     fileprivate let textShadowColor: UIColor?
