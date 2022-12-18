@@ -2175,13 +2175,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNode.displaysAsynchronously = false
         
         self.titleCredibilityIconView = ComponentHostView<Empty>()
-        self.titleNode.stateNode(forKey: PeerHeaderTitleState.thin)?.view.addSubview(self.titleCredibilityIconView)
+        self.titleNode.addAccessory(for: PeerHeaderTitleState.thin, accessoryView: self.titleCredibilityIconView)
+//        self.titleNode/*.stateNode(forKey: PeerHeaderTitleState.thin)?*/.view.addSubview(self.titleCredibilityIconView)
         
         self.titleCredibilityIconViewCopy = ComponentHostView<Empty>()
-        self.titleNode.stateNode(forKey: PeerHeaderTitleState.thicInverted)?.view.addSubview(self.titleCredibilityIconViewCopy)
+        self.titleNode.addAccessory(for: PeerHeaderTitleState.thicInverted, accessoryView: self.titleCredibilityIconViewCopy)
+//        self.titleNode/*.stateNode(forKey: PeerHeaderTitleState.thicInverted)?*/.view.addSubview(self.titleCredibilityIconViewCopy)
         
         self.titleExpandedCredibilityIconView = ComponentHostView<Empty>()
-        self.titleNode.stateNode(forKey: PeerHeaderTitleState.thic)?.view.addSubview(self.titleExpandedCredibilityIconView)
+        self.titleNode.addAccessory(for: PeerHeaderTitleState.thic, accessoryView: self.titleExpandedCredibilityIconView)
+//        self.titleNode/*.stateNode(forKey: PeerHeaderTitleState.thic)?*/.view.addSubview(self.titleExpandedCredibilityIconView)
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
@@ -2785,11 +2788,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.update(
-            strings: [
-                PeerHeaderTitleState.thin: titleString,
-//                PeerHeaderTitleState.thinInverted: smallTitleString,
-                PeerHeaderTitleState.thic: smallTitleString,
-                PeerHeaderTitleState.thicInverted: backgroundTitleString
+            states: [
+                PeerHeaderTitleState.thin: .init(string: titleString, alpha: isAvatarExpanded ? 0 : 1),
+//                PeerHeaderTitleState.thinInverted: .init(string: smallTitleString, alpha: isAvatarExpanded ? 0 : 1),
+                PeerHeaderTitleState.thic: .init(string: smallTitleString, alpha: isAvatarExpanded ? 1 : 0),
+                PeerHeaderTitleState.thicInverted: .init(string: backgroundTitleString, alpha: isAvatarExpanded ? 1 : 0)
             ],
             mainState: isAvatarExpanded ? PeerHeaderTitleState.thic : PeerHeaderTitleState.thin,
             constrainedSize: titleConstrainedSize,
@@ -2935,24 +2938,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let _ = nextPanelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
-        
-        var titleHorizontalOffset: CGFloat = 0.0
-        if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
-            titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
-            
-            var collapsedTransitionOffset: CGFloat = 0.0
-            if let navigationTransition = self.navigationTransition {
-                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
-            }
-            
-            // TODO: properly...
-            let magicCenteredTitleSize = titleSize.width + 4
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: magicCenteredTitleSize + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 2.0), size: credibilityIconSize))
-            
-            transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
-            
-            transition.updateFrame(view: self.titleCredibilityIconViewCopy, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
-        }
         
         let titleFrame: CGRect
         var subtitleFrame: CGRect
@@ -3394,6 +3379,54 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
         let offsetBehindRightButton: CGFloat = 44
+        var titleHorizontalOffset: CGFloat = 0.0
+        if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
+            titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
+            
+//            var collapsedTransitionOffset: CGFloat = 0.0
+//            if let navigationTransition = self.navigationTransition {
+//                collapsedTransitionOffset = -10.0 * navigationTransition.fraction
+//            }
+            
+            // TODO: properly...
+            let magicCenteredTitleSize = titleSize.width
+            let thinNodeFrame = self.titleNode.stateNode(forKey: PeerHeaderTitleState.thin)?.frame ?? .zero
+            let thicNodeFrame = self.titleNode.stateNode(forKey: PeerHeaderTitleState.thic)?.frame ?? .zero
+            let thicInvertedNodeFrame = self.titleNode.stateNode(forKey: PeerHeaderTitleState.thicInverted)?.frame ?? .zero
+            
+            let collapseFraction: CGFloat
+            if navigationTransition != nil {
+                collapseFraction = transitionFraction
+            } else {
+                let transitionDeadZone: CGFloat = 0.3
+                let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
+                collapseFraction = currentTitleCollapseFraction
+            }
+            
+//            let titleScale = (1.0 - collapseFraction) * 1.0 + collapseFraction * titleMinScale
+//            let availableWidth = titleConstrainedSize.width / titleScale - offsetBehindRightButton * (collapseFraction)
+            let finalTitleWidth = navigationTransition != nil ? transitionSourceTitleFrame.width / 0.7 : titleFrame.width// min(singleLineSize.width / titleScale, availableWidth)
+            
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
+                origin: CGPoint(
+                    x: magicCenteredTitleSize * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0/* + collapsedTransitionOffset*/,
+                    y: floor((titleSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - credibilityIconSize.height) / 2.0) + 2.0),
+                size: credibilityIconSize)
+                .offsetBy(dx: thinNodeFrame.minX, dy: thinNodeFrame.minY))
+            
+            transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(
+                origin: CGPoint(
+                    x: titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
+                    y: floor((titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0),
+                size: titleExpandedCredibilityIconSize).offsetBy(dx: thicNodeFrame.minX, dy: thicNodeFrame.minY))
+            
+            transition.updateFrame(view: self.titleCredibilityIconViewCopy, frame: CGRect(
+                origin: CGPoint(
+                    x: titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
+                    y: floor((titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0),
+                size: titleExpandedCredibilityIconSize).offsetBy(dx: thicInvertedNodeFrame.minX, dy: thicInvertedNodeFrame.minY))
+        }
+        
         if !titleSize.width.isZero && !titleSize.height.isZero {
             let rawTitleFrame: CGRect
             if self.navigationTransition != nil {
@@ -3426,6 +3459,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 if !self.isAvatarExpanded {
                     titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
                 }
+                
+                let trailingIconWidth: CGFloat
+                if let credibilityIconSize = self.credibilityIconSize {
+                    trailingIconWidth = credibilityIconSize.width
+                } else {
+                    trailingIconWidth = 0
+                }
+                
                 let singleLineCenterX = singleSize.width / 2
                 let newCenterX = min(singleLineCenterX * finalTitleScale, transitionSourceTitleFrame.width / 2)
                 let newCenterY = min(singleSize.height / 2 * finalTitleScale, transitionSourceTitleFrame.height / 2)
@@ -3434,7 +3475,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let widthDiff: CGFloat = newCenterX - titleFrame.width / 2 * finalTitleScale // (transitionSourceTitleFrame.width - max(titleFrame.width * finalTitleScale, transitionSourceTitleFrame.width))
                 let heightDiff: CGFloat = newCenterY - titleFrame.height / 2 * finalTitleScale// transitionSourceTitleFrame.height - max(titleFrame.height * finalTitleScale, transitionSourceTitleFrame.height)
                 let titleCenter = CGPoint(
-                    x: transitionFraction * (transitionSourceTitleFrame.midX - widthDiff) + (1.0 - transitionFraction) * titleFrame.midX,
+                    x: transitionFraction * (transitionSourceTitleFrame.midX - widthDiff - trailingIconWidth / 2) + (1.0 - transitionFraction) * titleFrame.midX,
                     y: transitionFraction * (transitionSourceTitleFrame.midY - heightDiff) + (1.0 - transitionFraction) * (titleFrame.midY))
                 let subtitleCenter = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX, y: transitionFraction * transitionSourceSubtitleFrame.midY + (1.0 - transitionFraction) * subtitleFrame.midY)
                 
@@ -3443,7 +3484,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,
                         y: titleCenter.y - titleFrame.size.height * neutralTitleScale / 2.0),
                     size: CGSize(
-                        width: titleFrame.size.width * neutralTitleScale,
+                        width: (titleFrame.size.width + trailingIconWidth * transitionFraction) * neutralTitleScale,
                         height: titleFrame.size.height * neutralTitleScale
                     )
                 )
@@ -3563,19 +3604,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             let commonRoot = self.layer
             if let overlayTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpanded) {
-                let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: overlayTitleNode.layer)
-                let titleMask = CAShapeLayer()
-                let maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
-                titleMask.path = maskPath.cgPath
-                titleMask.fillColor = UIColor.black.cgColor
-                titleMask.frame = overlayTitleNode.layer.bounds
-                overlayTitleNode.layer.mask = titleMask
-                overlayTitleNode.alpha = isAvatarExpanded ? 1 : 0
+                func applyAvatarMask(to layer: CALayer) {
+                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
+                    let titleMask = CAShapeLayer()
+                    let maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
+                    titleMask.path = maskPath.cgPath
+                    titleMask.fillColor = UIColor.black.cgColor
+                    titleMask.frame = layer.bounds
+                    layer.mask = titleMask
+                    layer.opacity = isAvatarExpanded ? 1 : 0
+//                    overlayTitleNode.alpha = isAvatarExpanded ? 1 : 0
+                }
                 
-                if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
-//                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: backgroundTitleNode.layer)
-                    // Invert
-                    let darkTitleLayer = backgroundTitleNode.layer
+                func applyInvertedAvatarMask(to layer: CALayer) {
+                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
                     let path = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
                     let invertedTitleMask = CAShapeLayer()
                     invertedTitleMask.masksToBounds = false
@@ -3583,7 +3625,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     invertedTitleMask.fillRule = .evenOdd
                     invertedTitleMask.path = path.cgPath
                     invertedTitleMask.fillColor = UIColor.black.cgColor
-                    darkTitleLayer.mask = invertedTitleMask
+                    layer.mask = invertedTitleMask
+                }
+                
+                applyAvatarMask(to: overlayTitleNode.layer)
+                applyAvatarMask(to: self.titleExpandedCredibilityIconView.layer)
+                
+                if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
+                    applyInvertedAvatarMask(to: backgroundTitleNode.layer)
+                    applyInvertedAvatarMask(to: self.titleCredibilityIconViewCopy.layer)
+//                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: backgroundTitleNode.layer)
+                    // Invert
+//                    let darkTitleLayer = backgroundTitleNode.layer
+//                    let path = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
+//                    let invertedTitleMask = CAShapeLayer()
+//                    invertedTitleMask.masksToBounds = false
+//                    path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 4200, height: 4200)))
+//                    invertedTitleMask.fillRule = .evenOdd
+//                    invertedTitleMask.path = path.cgPath
+//                    invertedTitleMask.fillColor = UIColor.black.cgColor
+//                    darkTitleLayer.mask = invertedTitleMask
+                    
+                    
                 }
             }
         }

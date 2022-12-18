@@ -18,6 +18,11 @@ final class ExpandableTextNode: ASDisplayNode {
     
 }
 
+struct ExpandablePeerTitleTextNodeState {
+    let string: NSAttributedString
+    let alpha: CGFloat
+}
+
 final class ExpandablePeerTitleContainerNode: ASDisplayNode {
     var allAlignedBy: AnyHashable?
     var textSubnodes: [AnyHashable: ExpandablePeerTitleTextNode] = [:]
@@ -28,7 +33,9 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
     var lastMainLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout?
     var gradientFadeMask = CALayer()
     
-    func update(strings: [AnyHashable: NSAttributedString], mainState: AnyHashable?, constrainedSize: CGSize, textExpansionFraction: CGFloat, isAvatarExpanded: Bool, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> [AnyHashable: MultiScaleTextLayout] {
+    let fadableContainerNode = ASDisplayNode()
+    
+    func update(states: [AnyHashable: ExpandablePeerTitleTextNodeState], mainState: AnyHashable?, constrainedSize: CGSize, textExpansionFraction: CGFloat, isAvatarExpanded: Bool, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> [AnyHashable: MultiScaleTextLayout] {
         var commonExpandedLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout? = nil
         
         var mainLayout: MultiScaleTextLayout?
@@ -36,24 +43,25 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         self.allAlignedBy = mainState
         
         if let allAlignedBy = mainState {
-            commonExpandedLayout = textSubnodes[allAlignedBy]?.getExpandedLayout(string: strings[allAlignedBy]!, forcedAlignment: isAvatarExpanded ? .left : .center, constrainedSize: constrainedSize)
+            commonExpandedLayout = textSubnodes[allAlignedBy]?.getExpandedLayout(string: states[allAlignedBy]?.string ?? .init(), forcedAlignment: isAvatarExpanded ? .left : .center, constrainedSize: constrainedSize)
             lastMainLayout = commonExpandedLayout
         }
         
-        for (key, string) in strings {
-            guard let node = textSubnodes[key], let layout = commonExpandedLayout ?? textSubnodes[key]?.getExpandedLayout(string: string, forcedAlignment: isAvatarExpanded ? .left : .center, constrainedSize: constrainedSize) else {
+        for (key, state) in states {
+            guard let node = textSubnodes[key], let layout = commonExpandedLayout ?? textSubnodes[key]?.getExpandedLayout(string: state.string, forcedAlignment: isAvatarExpanded ? .left : .center, constrainedSize: constrainedSize) else {
 //                assertionFailure("check")
                 continue
             }
-            let size = node.updateIfNeeded(string: string, expandedLayout: layout, expansionFraction: textExpansionFraction, needsExpansionLayoutUpdate: needsExpansionLayoutUpdate, transition: transition)
+            let size = node.updateIfNeeded(string: state.string, expandedLayout: layout, expansionFraction: textExpansionFraction, needsExpansionLayoutUpdate: needsExpansionLayoutUpdate, transition: transition)
             if key == mainState {
                 mainLayout = MultiScaleTextLayout(size: size)
             }
             result[key] = MultiScaleTextLayout(size: size)
         }
+        
         if let mainLayout = mainLayout {
             let mainBounds = CGRect(origin: CGPoint(x: -mainLayout.size.width / 2.0, y: -mainLayout.size.height / 2.0), size: mainLayout.size)
-            for (key, _) in strings {
+            for (key, _) in states {
                 if let node = self.textSubnodes[key], let nodeLayout = result[key] {
                     node.updateTextFrame(CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size))
                 }
@@ -61,12 +69,18 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         }
         
         if !isTransitioning {
-            self.textSubnodes[PeerHeaderTitleState.thin]?.alpha = isAvatarExpanded ? 0 : 1
-            self.textSubnodes[PeerHeaderTitleState.thinInverted]?.alpha = isAvatarExpanded ? 0 : 1
-            self.textSubnodes[PeerHeaderTitleState.thic]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
-            self.textSubnodes[PeerHeaderTitleState.thicInverted]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
+            for (key, state) in states {
+                self.textSubnodes[key]?.alpha = state.alpha
+                self.accessoryViews[key]?.alpha = state.alpha
+            }
         }
         
+//        if !isTransitioning {
+//            self.textSubnodes[PeerHeaderTitleState.thin]?.alpha = isAvatarExpanded ? 0 : 1
+//            self.textSubnodes[PeerHeaderTitleState.thinInverted]?.alpha = isAvatarExpanded ? 0 : 1
+//            self.textSubnodes[PeerHeaderTitleState.thic]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
+//            self.textSubnodes[PeerHeaderTitleState.thicInverted]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
+//        }
         return result
     }
     
@@ -134,7 +148,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             offsetX = 0
         }
         gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX, y: -height / 2, width: availableWidth + gradientRadius, height: height)
-        self.layer.mask = gradientFadeMask
+        fadableContainerNode.layer.mask = gradientFadeMask
     }
 //
 //    // Temporary convenience
@@ -144,11 +158,20 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
 //            PeerHeaderTitleState.thin.rawValue:
 //        ]
 //    }
+    var accessoryViews: [AnyHashable: UIView] = [:]
+    
+    func addAccessory(for state: AnyHashable, accessoryView: UIView) {
+        accessoryViews[state]?.removeFromSuperview()
+        accessoryViews[state] = accessoryView
+        view.addSubview(accessoryView)
+    }
     
     init(stateKeys: [AnyHashable], order: [AnyHashable: Int]?) {
         self.textSubnodes = Dictionary(stateKeys.map { ($0, ExpandablePeerTitleTextNode()) }, uniquingKeysWith: { lhs, _ in lhs })
         
         super.init()
+        
+        addSubnode(fadableContainerNode)
         
         let orderedNodes: [ExpandablePeerTitleTextNode]
         if let order {
@@ -162,7 +185,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             orderedNodes = self.textSubnodes.map(\.value)
         }
         for node in orderedNodes {
-            self.addSubnode(node)
+            fadableContainerNode.addSubnode(node)
         }
     }
     
@@ -193,7 +216,9 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     let textContainerNode = ASDisplayNode()
     var textFragmentsNodes: [ImmediateTextNode] = []
     
-    var maxNumberOfLines: Int = 5
+    var maxNumberOfLines: Int = 2
+    /// Quick fix for regular collapsed state
+    let rtlOneliner = ImmediateTextNode()
     
     override init() {
         super.init()
