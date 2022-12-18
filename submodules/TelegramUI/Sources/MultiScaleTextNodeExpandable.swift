@@ -45,7 +45,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
 
     // Just going straight with expansion
     func updateExpansion(progress: CGFloat, transition: ContainedViewLayoutTransition, forcedAlignment: NSTextAlignment?, shouldReweight: Bool) {
-        guard var attrString = prevString, let singleLineInfo = getLinesArrayOfString(attrString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first, let prevLines else { return }
+        guard var attrString = prevString, let singleLineInfo = getLayoutLines(attrString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first, let prevLines else { return }
         let isAvatarExpanded = forcedAlignment == .left
         
         var totalSize = prevSize! // dummyNode.updateLayout(prevSize!)
@@ -169,10 +169,10 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             if textSubnodes.isEmpty {
                 _ = update(string: string, constrainedSize: constrainedSize, transition: .immediate, isExpanded: false)
             }
-            lines = getLinesArrayOfString(string, textSize: constrainedSize)
+            lines = getLayoutLines(string, textSize: constrainedSize)
         } else {
             // Also assuming there are no newlines in text (otherwise remove preemtively)
-            lines = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+            lines = getLayoutLines(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
         }
         
 //        let stringChanged = prevString != string
@@ -250,7 +250,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
             if let prevString = prevString, let prevSize = prevSize {
                 // Place new lineTextNode at the current position
                 // TODO: remove recalculation for previous (convenience)
-                let prevLinesInfo = getLinesArrayOfString(prevString, textSize: prevSize)
+                let prevLinesInfo = getLayoutLines(prevString, textSize: prevSize)
                 // Since implementing only binary expansion (for initial animation state)
                 if !wasExpanded && isExpanded, let prevLineInfo = prevLinesInfo.first {
                     let prevCTLine = prevLineInfo.ctLine
@@ -321,7 +321,7 @@ final class MultiScaleTextStateNodeExpandable: ASDisplayNode {
         let lineRange: NSRange
     }
     
-    private func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize) -> [LayoutLine] {
+    private func getLayoutLines(_ attStr: NSAttributedString, textSize: CGSize) -> [LayoutLine] {
         var linesArray = [LayoutLine]()
         
         let frameSetter: CTFramesetter = CTFramesetterCreateWithAttributedString(attStr as CFAttributedString)

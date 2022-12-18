@@ -3351,14 +3351,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.avatarListNode.listContainerNode.isCollapsing && !self.ignoreCollapse {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
-//        let whatIs35: CGFloat = 35.0
-//        let singleLineTitleHeight: CGFloat = 35
         // MARK: header size
-        // TODO: also mind deadzone
-        // let max(0.0, min(1.0, contentOffset / titleCollapseOffset))
-        let titleHeight: CGFloat = titleSize.height // titleSize.height * (1.0 - titleCollapseFraction) + singleLineTitleFrame.height * titleCollapseFraction // titleSize.height
-        // TODO: !! Use current collapse factor
-        var panelWithAvatarHeight: CGFloat = /*whatIs35*/titleHeight + avatarSize
+        let titleHeight: CGFloat = titleSize.height
+        // TODO: Use current collapse factor
+        var panelWithAvatarHeight: CGFloat = titleHeight + avatarSize
         if threadData != nil {
             panelWithAvatarHeight += 10.0
         }
@@ -3413,9 +3409,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let gradientRadius: CGFloat = 36
             let symmetricCollapsedMaxX: CGFloat
             if isAvatarExpanded {
-                symmetricCollapsedMaxX = transitionSourceTitleFrame.width / 0.7
+                symmetricCollapsedMaxX = min(transitionSourceTitleFrame.width / 0.7, singleLineSize.width)
             } else {
-                symmetricCollapsedMaxX = titleFrame.midX + min(singleLineSize.width, titleConstrainedSize.width + gradientRadius) / 2
+                symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 2)
             }
             let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             

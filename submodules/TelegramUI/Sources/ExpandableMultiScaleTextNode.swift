@@ -76,18 +76,12 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             }
         }
         
-//        if !isTransitioning {
-//            self.textSubnodes[PeerHeaderTitleState.thin]?.alpha = isAvatarExpanded ? 0 : 1
-//            self.textSubnodes[PeerHeaderTitleState.thinInverted]?.alpha = isAvatarExpanded ? 0 : 1
-//            self.textSubnodes[PeerHeaderTitleState.thic]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
-//            self.textSubnodes[PeerHeaderTitleState.thicInverted]?.alpha = (1 - self.textSubnodes[PeerHeaderTitleState.thin]!.alpha)
-//        }
         return result
     }
     
     func updateFading(availableWidth: CGFloat, containerWidth: CGFloat, height: CGFloat) {
         gradientFadeMask.removeFromSuperlayer()
-        guard let string = self.textSubnodes[allAlignedBy!]?.currentString, let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first else { return }
+        guard let allAlignedBy, let string = self.textSubnodes[allAlignedBy]?.currentString, let singleLineInfo = getLayoutLines(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first else { return }
         
         gradientFadeMask = .init()
         // Pass fade side from AnimatedHeaderLabelNode
@@ -276,14 +270,14 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     frame: rects[index],
                     ctLine: textNodeLayout.lines[index].line,
                     lineRange: range,
-                    glyphRuns: CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as! [CTRun],
-                    glyphRunsRanges: (CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as! [CTRun]).map {
+                    glyphRuns: CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as? [CTRun] ?? [],
+                    glyphRunsRanges: (CTLineGetGlyphRuns(textNodeLayout.lines[index].line) as? [CTRun] ?? []).map {
                         let cfRange = CTRunGetStringRange($0)
                         return NSRange(location: cfRange.location, length: cfRange.length)
                     }
                 )
             }
-            // let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+            // let lines: [LayoutLine] = getLayoutLines(string, textSize: constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
             var width: CGFloat = 0
             var height: CGFloat = 0
             for line in lines {
@@ -369,9 +363,6 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     }
     var prevExpansion: CGFloat?
     func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> CGSize {
-        // TODO: store
-//        guard let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first else { return .zero }
-        
         var shouldRemake = false
         
         if currentString != string || expandedLayout.rangeToFrame.keys != currentLayout?.rangeToFrame.keys {
@@ -390,7 +381,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         } else {
             textFragmentsNodes.forEach { $0.removeFromSupernode() }
             textFragmentsNodes = []
-//            let lines = getLinesArrayOfString(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+//            let lines = getLayoutLines(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
 //
 //            for line in lines {
 //                for glyphRun in line.glyphRuns {
@@ -442,7 +433,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //        textContainerNode.addSubnode(dummyNode)
 //        debugTextNode = dummyNode
         
-        let lines: [LayoutLine] = getLinesArrayOfString(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+        let lines: [LayoutLine] = getLayoutLines(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
         var width: CGFloat = 0
         var height: CGFloat = 0
         for line in lines {
@@ -457,7 +448,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         guard let expandedLayout = currentLayout else { return }
         // TODO: store
         guard let string = currentString,
-              let singleLineInfo = getLinesArrayOfString(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
+              let singleLineInfo = getLayoutLines(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
         else { return }
         
         let sortedFrames = expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).map { $0 }
@@ -516,7 +507,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             
 //            textFragmentsNode.backgroundColor = .red.withAlphaComponent(0.4)
             transition.updateFrame(node: textFragmentsNode, frame: currentProgressFrame)
-            // TODO: decide on whether stick to node.updateLayout() size or CTLine size
+            // TODO: decide on whether to stick to node.updateLayout() size or CTLine size
             _ = textFragmentsNode.updateLayout(currentProgressFrame.size)// CGSize(width: totalSize.width, height: totalSize.height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
         }
         prevExpansion = expansionFraction
@@ -574,7 +565,7 @@ struct LayoutLine {
     let glyphRunsRanges: [NSRange]
 }
 
-func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize, maxNumberOfLines: Int = .max) -> [LayoutLine] {
+func getLayoutLines(_ attStr: NSAttributedString, textSize: CGSize, maxNumberOfLines: Int = .max) -> [LayoutLine] {
     var linesArray = [LayoutLine]()
     
     let frameSetter: CTFramesetter = CTFramesetterCreateWithAttributedString(attStr as CFAttributedString)
@@ -598,12 +589,12 @@ func getLinesArrayOfString(_ attStr: NSAttributedString, textSize: CGSize, maxNu
         let unaffectedString = attStr.attributedSubstring(from: NSRange(location: 0, length: lastVisibleRange.location))
         let firstLines: [LayoutLine]
         if lastVisibleRange.location > 0 {
-            firstLines = getLinesArrayOfString(unaffectedString, textSize: textSize)
+            firstLines = getLayoutLines(unaffectedString, textSize: textSize)
         } else {
             firstLines = []
         }
         // MARK: maybe here runs get broken
-        let lastLines = getLinesArrayOfString(lastString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+        let lastLines = getLayoutLines(lastString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
         let lastLine = lastLines.first
             .flatMap { line in
                 return LayoutLine(attributedString: line.attributedString, isRTL: line.isRTL, frame: line.frame, ctLine: line.ctLine, lineRange: NSRange(location: lastVisibleRange.location, length: attStr.length - lastVisibleRange.location), glyphRuns: line.glyphRuns, glyphRunsRanges: line.glyphRunsRanges.map { NSRange(location: $0.location + lastVisibleRange.location, length: $0.length) })

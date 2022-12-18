@@ -236,7 +236,7 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
                             
                             let solidPartLayer = CALayer()
                             solidPartLayer.backgroundColor = UIColor.black.cgColor
-                            // TODO: Probably something else with RTL
+                            
                             if layout.hasRTL {
                                 solidPartLayer.frame = CGRect(
                                     origin: CGPoint(x: textNode.bounds.width - effectiveSegmentWidth + gradientRadius - gradientInset, y: 0),
