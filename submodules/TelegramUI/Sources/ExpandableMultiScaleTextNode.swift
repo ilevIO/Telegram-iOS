@@ -18,6 +18,7 @@ final class ExpandableTextNode: ASDisplayNode {
     
 }
 
+//typealias ExpandablePeerTitleTextNodeState = MultiScaleTextState
 struct ExpandablePeerTitleTextNodeState {
     let string: NSAttributedString
     let alpha: CGFloat
