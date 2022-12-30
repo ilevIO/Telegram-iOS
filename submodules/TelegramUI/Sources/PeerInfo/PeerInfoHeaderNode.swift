@@ -2265,7 +2265,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
         self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
-        
+        self.regularContentNode.backgroundColor = .blue.withAlphaComponent(0.2)
         self.addSubnode(self.regularContentNode)
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
@@ -2580,7 +2580,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             let expandedIconSize = doUpdate(self.titleExpandedCredibilityIconView, content: emojiExpandedStatusContent, emojiUpdated: nil)
             _ = doUpdate(self.titleCredibilityIconViewCopy, content: emojiRegularStatusContent, emojiUpdated: onCredibilityEmojiUpdated)
-            
+            self.titleCredibilityIconView.backgroundColor = .yellow.withAlphaComponent(0.4)
+            self.titleExpandedCredibilityIconView.backgroundColor = .systemPink.withAlphaComponent(0.4)
             self.credibilityIconSize = iconSize
             self.titleExpandedCredibilityIconSize = expandedIconSize
         }
@@ -2600,6 +2601,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var transitionSourceAvatarFrame: CGRect?
         var transitionSourceTitleFrame = CGRect()
         var transitionSourceSubtitleFrame = CGRect()
+        
+        class TestShared {
+            static let testLayer = CALayer()
+        }
+        let sharedLayer = TestShared.testLayer
+        sharedLayer.removeFromSuperlayer()
+//        self.titleNode.layer.superlayer?.addSublayer(sharedLayer)
+        sharedLayer.frame = navigationTransition?.sourceTitleFrame ?? .zero
+        sharedLayer.backgroundColor = UIColor.yellow.withAlphaComponent(0.2).cgColor
+        print(sharedLayer.frame)
         
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 13.0), size: CGSize(width: avatarSize, height: avatarSize))
         
@@ -3418,9 +3429,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
                     x: magicCenteredTitleSize * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0/* + collapsedTransitionOffset*/,
-                    y: floor((titleSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - credibilityIconSize.height) / 2.0) + 2.0),
+                    y: floor((titleSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - credibilityIconSize.height) / 2.0)),
                 size: credibilityIconSize)
                 .offsetBy(dx: thinNodeFrame.minX, dy: thinNodeFrame.minY))
+            
+            class Local {
+                static let titleCredibilityIconViewTestLayer = CALayer()
+            }
+//            Local.titleCredibilityIconViewTestLayer.backgroundColor = UIColor.black.cgColor
+//            Local.titleCredibilityIconViewTestLayer.frame = .init(x: -30, y: 0, width: self.titleCredibilityIconView.layer.bounds.width + 30, height: self.titleCredibilityIconView.layer.bounds.height / 2)
+//            titleCredibilityIconView.layer.masksToBounds = false
+//            Local.titleCredibilityIconViewTestLayer.removeFromSuperlayer()
+//            titleCredibilityIconView.layer.addSublayer(Local.titleCredibilityIconViewTestLayer)
             
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(
                 origin: CGPoint(

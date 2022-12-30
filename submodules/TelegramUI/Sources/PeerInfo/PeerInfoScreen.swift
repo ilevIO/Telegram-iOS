@@ -9666,7 +9666,8 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateFrame(view: previousTitleNode.view, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
             transition.updateFrame(node: previousStatusContainerNode, frame: CGRect(origin: self.headerNode.subtitleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(node: previousStatusNode, frame: CGRect(origin: CGPoint(x: -previousStatusFrame.size.width / 2.0, y: -previousStatusFrame.size.height / 2.0), size: previousStatusFrame.size))
-            
+            self.headerNode.subtitleNodeRawContainer.backgroundColor = UIColor.red.withAlphaComponent(0.4)
+            previousStatusNode.backgroundColor = UIColor.yellow.withAlphaComponent(0.4)
             transition.updateSublayerTransformScale(node: previousTitleContainerNode, scale: titleScale)
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
