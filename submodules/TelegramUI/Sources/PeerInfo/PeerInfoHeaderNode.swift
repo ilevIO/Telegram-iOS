@@ -2195,7 +2195,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
-        self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
+        self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateNavTransitionSupport, TitleNodeStateExpanded])
         self.subtitleNode.displaysAsynchronously = false
 
         self.panelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
@@ -2272,7 +2272,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
         self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
-        self.regularContentNode.backgroundColor = .blue.withAlphaComponent(0.2)
+//        self.regularContentNode.backgroundColor = .blue.withAlphaComponent(0.2)
         self.addSubnode(self.regularContentNode)
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
@@ -2708,10 +2708,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var isFake = false
         let titleStringText: String
         let smallTitleAttributes: MultiScaleTextState.Attributes
-        let backgroundTitleAttributes: MultiScaleTextState.Attributes
+        let invertedTitleAttributes: MultiScaleTextState.Attributes
         let titleAttributes: MultiScaleTextState.Attributes
         let subtitleStringText: String
         let smallSubtitleAttributes: MultiScaleTextState.Attributes
+        let invertedSubtitleAttributes: MultiScaleTextState.Attributes
         let subtitleAttributes: MultiScaleTextState.Attributes
         
 //        let backgroundTitleString: NSAttributedString
@@ -2751,7 +2752,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleStringText = title
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
-            backgroundTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            invertedTitleAttributes = MultiScaleTextState.Attributes(font: smallTitleAttributes.font, color: titleAttributes.color)
 //            backgroundTitleString = NSAttributedString(string: title, font: Font.semibold(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             
             if self.isSettings, let user = peer as? TelegramUser {
@@ -2763,6 +2764,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = subtitle
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             } else if let _ = threadData {
@@ -2775,6 +2777,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = statusText
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(15.0), color: subtitleColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 
@@ -2804,6 +2807,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = statusData.text
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
 
@@ -2824,6 +2828,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleStringText = " "
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
                 smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             }
@@ -2831,11 +2836,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleStringText = " "
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
-            backgroundTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            invertedTitleAttributes = MultiScaleTextState.Attributes(font: smallTitleAttributes.font, color: titleAttributes.color)
             
             subtitleStringText = " "
             subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
             smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+            invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
             
             usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             
@@ -2858,7 +2864,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let titleString = NSAttributedString(string: titleStringText, font: titleAttributes.font, textColor: titleAttributes.color)
         let smallTitleString = NSAttributedString(string: titleStringText, font: smallTitleAttributes.font, textColor: smallTitleAttributes.color)
-        let backgroundTitleString = NSAttributedString(string: titleStringText, font: backgroundTitleAttributes.font, textColor: backgroundTitleAttributes.color)
+        let backgroundTitleString = NSAttributedString(string: titleStringText, font: invertedTitleAttributes.font, textColor: invertedTitleAttributes.color)
         
         let titleNodeLayout = self.titleNode.update(
             states: [
@@ -2884,7 +2890,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize)
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateNavTransitionSupport: MultiScaleTextState(attributes: invertedSubtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleStringText
         
@@ -3133,7 +3140,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         self.subtitleNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
-            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
+            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0,
+            TitleNodeStateNavTransitionSupport: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
 
         self.panelSubtitleNode.update(stateFractions: [
@@ -3184,17 +3192,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             collapsedAvatarCornerRadius = avatarSize / 2.0
         }
-        
+        let avatarListCornerRadius: CGFloat
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
-                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 1.0 / 2.0 * (transitionFraction * transitionSourceAvatarFrame.width + /*self.avatarListNode.listContainerNode.layer.bounds.width*/expandedAvatarHeight * (1 - transitionFraction)) * transitionFraction/*transitionFraction * transitionSourceAvatarFrame.width / 2.0*/, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMaxYCorner], transitionedSize: CGSize(width: avatarSize, height: avatarSize))
+                avatarListCornerRadius = 1.0 / 2.0 * (transitionFraction * transitionSourceAvatarFrame.width + /*self.avatarListNode.listContainerNode.layer.bounds.width*/expandedAvatarHeight * (1 - transitionFraction)) * transitionFraction
+//                transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: avatarCornerRadius, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMaxYCorner], transitionedSize: CGSize(width: avatarSize, height: avatarSize))
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: transitionFraction * transitionSourceAvatarFrame.width / 2.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMaxYCorner], transitionedSize: CGSize(width: avatarSize, height: avatarSize))
             } else {
+                avatarListCornerRadius = 0
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0/*deviceCornerRadius*/, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transitionedSize: expandedAvatarListSize)
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0/*deviceCornerRadius*/, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transitionedSize: expandedAvatarListSize)
             }
         } else if self.avatarListNode.listContainerNode.cornerRadius != collapsedAvatarCornerRadius/* || !self.avatarListNode.listContainerNode.layer.maskedCorners.contains(.layerMaxXMaxYCorner)*/ {
+            avatarListCornerRadius = collapsedAvatarCornerRadius
             transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: collapsedAvatarCornerRadius, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMaxYCorner], transitionedSize: CGSize(width: avatarSize, height: avatarSize))
             transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: collapsedAvatarCornerRadius, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMaxYCorner], transitionedSize: CGSize(width: avatarSize, height: avatarSize), completion: { [weak self] _ in
                 guard let strongSelf = self else {
@@ -3208,6 +3219,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 }
             })
+        } else {
+            avatarListCornerRadius = self.avatarListNode.listContainerNode.layer.cornerRadius
         }
         
         self.avatarListNode.update(size: CGSize(), avatarSize: avatarSize, isExpanded: self.isAvatarExpanded, peer: peer, threadId: self.forumTopicThreadId, threadInfo: threadData?.info, theme: presentationData.theme, transition: transition)
@@ -3301,8 +3314,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let path = CGMutablePath()
             let adjustedDeviceCornerRadius = deviceCornerRadius - 1
             
-            let topRadius = max(adjustedDeviceCornerRadius * (1 - transitionFraction), self.avatarListNode.listContainerNode.cornerRadius)
-            let bottomRadius = self.avatarListNode.listContainerNode.cornerRadius
+            let topRadius = max(adjustedDeviceCornerRadius * (1 - transitionFraction), avatarListCornerRadius)
+            let bottomRadius = avatarListCornerRadius
             let pathBounds = self.avatarListNode.listContainerNode.bounds
             path.move(to: CGPoint(x: pathBounds.midX, y: pathBounds.minY))
             path.addArc(tangent1End: CGPoint(x: pathBounds.maxX, y: pathBounds.minY), tangent2End: CGPoint(x: pathBounds.maxX, y: pathBounds.maxY), radius: topRadius)
@@ -3698,15 +3711,29 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let commonRoot = self.layer
             var usesActualAvatarMask: Bool { false }
             func applyAvatarMask(to layer: CALayer) {
+                let cornerRadius = commonRoot.convert(
+                    commonRoot.convert(CGRect(
+                        origin: .zero,
+                        size: CGSize(
+                            width: avatarListCornerRadius,
+                            height: avatarListCornerRadius)
+                        ),
+                        from: self.avatarListNode.listContainerNode.layer
+                    ),
+                    to: layer).width
+                
+                print("[avatarListCornerRadius]", cornerRadius)
                 let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.layer.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
+                
                 let titleMask = CAShapeLayer()
                 let maskPath: CGPath
                 if usesActualAvatarMask, let avatarMaskPath = avatarTransitionMask.path {
                     let bounds = avatarMaskPath.boundingBox
-                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX, y: -bounds.minY)
+                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX + frameInside.minX, y: -bounds.minY + frameInside.minY)
+//                    var offsetTransform = CGAffineTransform(translationX: frameInside.minX - self.avatarListNode.listContainerNode.layer.frame.minX, y: -bounds.minY)
                     maskPath = avatarMaskPath.mutableCopy(using: &offsetTransform)!
                 } else {
-                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius).cgPath
+                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: cornerRadius/* * frameInside.width / self.avatarListNode.listContainerNode.layer.bounds.width*/).cgPath
                 }
                 titleMask.path = maskPath
                 titleMask.fillColor = UIColor.black.cgColor
@@ -3717,14 +3744,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             
             func applyInvertedAvatarMask(to layer: CALayer) {
+                let cornerRadius = commonRoot.convert(
+                    commonRoot.convert(CGRect(
+                        origin: .zero,
+                        size: CGSize(
+                            width: avatarListCornerRadius,
+                            height: avatarListCornerRadius)
+                        ),
+                        from: self.avatarListNode.listContainerNode.layer
+                    ),
+                    to: layer).width
+                
                 let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: layer)
+                
                 let maskPath: CGPath
                 if usesActualAvatarMask, let avatarMaskPath = avatarTransitionMask.path {
                     let bounds = avatarMaskPath.boundingBox
-                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX, y: -bounds.minY)
+                    var offsetTransform = CGAffineTransform(translationX: -bounds.minX + frameInside.minX, y: -bounds.minY + frameInside.minY)
                     maskPath = avatarMaskPath.mutableCopy(using: &offsetTransform)!
                 } else {
-                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius).cgPath
+                    maskPath = UIBezierPath(roundedRect: frameInside, cornerRadius: cornerRadius).cgPath
                 }
                 
                 let path = UIBezierPath(cgPath: maskPath) // (roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
@@ -3757,8 +3796,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //                    invertedTitleMask.path = path.cgPath
 //                    invertedTitleMask.fillColor = UIColor.black.cgColor
 //                    darkTitleLayer.mask = invertedTitleMask
-                    
-                    
+                }
+            }
+            if let subtitleNode = self.subtitleNode.stateNode(forKey: TitleNodeStateExpanded) {
+                applyAvatarMask(to: subtitleNode.layer)
+                
+                if let backgroundSubtitleNode = self.subtitleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
+                    applyInvertedAvatarMask(to: backgroundSubtitleNode.layer)
                 }
             }
         }

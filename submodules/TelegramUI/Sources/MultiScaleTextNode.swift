@@ -84,16 +84,17 @@ final class MultiScaleTextNode: ASDisplayNode {
     }
     
     func update(stateFractions: [AnyHashable: CGFloat], alpha: CGFloat = 1.0, transition: ContainedViewLayoutTransition) {
-        var fractionSum: CGFloat = 0.0
-        for (_, fraction) in stateFractions {
-            fractionSum += fraction
-        }
+//        var fractionSum: CGFloat = 0.0
+//        for (state, fraction) in stateFractions {
+//            fractionSum += fraction
+//        }
+        let fractionCoeff: CGFloat = 1.0
         for (key, fraction) in stateFractions {
             if let node = self.stateNodes[key], let _ = node.currentLayout {
                 if !transition.isAnimated {
                     node.layer.removeAllAnimations()
                 }
-                transition.updateAlpha(node: node, alpha: fraction / fractionSum * alpha)
+                transition.updateAlpha(node: node, alpha: fraction / fractionCoeff * alpha)
             }
         }
     }

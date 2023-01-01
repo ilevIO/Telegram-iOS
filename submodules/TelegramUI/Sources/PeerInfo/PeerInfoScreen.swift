@@ -10029,7 +10029,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateFrame(view: previousTitleNode.view, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
             transition.updateFrame(node: previousStatusContainerNode, frame: CGRect(origin: self.headerNode.subtitleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(node: previousStatusNode, frame: CGRect(origin: CGPoint(x: -previousStatusFrame.size.width / 2.0, y: -previousStatusFrame.size.height / 2.0), size: previousStatusFrame.size))
-            self.headerNode.subtitleNodeRawContainer.backgroundColor = UIColor.red.withAlphaComponent(0.4)
+//            self.headerNode.subtitleNodeRawContainer.backgroundColor = UIColor.red.withAlphaComponent(0.4)
             previousStatusNode.backgroundColor = UIColor.yellow.withAlphaComponent(0.4)
             transition.updateSublayerTransformScale(node: previousTitleContainerNode, scale: titleScale)
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
@@ -10046,17 +10046,24 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             if fraction > fractionThreshold {
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - progressWithinThreshold))
                 transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: progressWithinThreshold)
+                
+                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - progressWithinThreshold))
+                transition.updateAlpha(node: previousStatusNode, alpha: progressWithinThreshold)
             } else if case .immediate = transition {
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1)
                 transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: 0.0)
+                
+                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1)
+                transition.updateAlpha(node: previousStatusNode, alpha: 0.0)
             } else {
                 self.headerNode.titleNode.alpha = 1 - fraction
                 previousTitleNode.view.layer.opacity = Float(fraction)
+                
+                self.headerNode.subtitleNode.alpha = 1.0 - fraction
+                previousStatusNode.alpha = fraction
             }
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))
-            transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: (1.0 - fraction))
-            transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             
             if case .animated = transition, (bottomNavigationBar.additionalContentNode.alpha.isZero || bottomNavigationBar.additionalContentNode.alpha == 1.0) {
                 bottomNavigationBar.additionalContentNode.alpha = fraction
