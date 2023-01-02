@@ -10042,6 +10042,10 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             } else {
                 fractionThreshold = 0.9999
             }
+            
+            var usingSameSubtitleTransition: Bool { true }
+            var subtitleSwitchThreshold: CGFloat { 0.5 }
+            
             let progressWithinThreshold = max(fraction - fractionThreshold, 0) / (1 - fractionThreshold)
             if fraction > fractionThreshold {
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: (1.0 - progressWithinThreshold))
@@ -10053,14 +10057,29 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1)
                 transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: 0.0)
                 
-                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1)
-                transition.updateAlpha(node: previousStatusNode, alpha: 0.0)
+                if usingSameSubtitleTransition {
+                    transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1)
+                    transition.updateAlpha(node: previousStatusNode, alpha: 0.0)
+                } else if fraction > subtitleSwitchThreshold && self.headerNode.subtitleNode.layer.opacity == 0 {
+                    self.headerNode.subtitleNode.layer.opacity = 1
+                    self.headerNode.subtitleNode.layer.animateAlpha(from: 0, to: 1, duration: 0.3)
+                    previousStatusNode.layer.animateAlpha(from: 1, to: 0, duration: 0.3)
+                } else if fraction < subtitleSwitchThreshold && self.headerNode.subtitleNode.layer.opacity == 1 {
+                    self.headerNode.subtitleNode.layer.opacity = 0
+                    self.headerNode.subtitleNode.layer.animateAlpha(from: 1, to: 0, duration: 0.3)
+                    previousStatusNode.layer.animateAlpha(from: 0, to: 1, duration: 0.3)
+                }
             } else {
                 self.headerNode.titleNode.alpha = 1 - fraction
                 previousTitleNode.view.layer.opacity = Float(fraction)
                 
                 self.headerNode.subtitleNode.alpha = 1.0 - fraction
                 previousStatusNode.alpha = fraction
+//                transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1.0 - fraction)
+//                transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: fraction)
+//
+//                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1.0 - fraction)
+//                transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             }
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))

@@ -278,7 +278,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             let fadeRadius: CGFloat = 50
             maskLayer.frame = textContainerNode.bounds
             // Adjusting for cases when top line becomes wider (currently due to kern increase used to fake weight transition)
-            let collapseAdjustment: CGFloat = 32
+            let collapseAdjustment: CGFloat = shouldChangeKernForReweight ? 32 : 0
             topSolidArea.frame = .init(x: 0, y: 0, width: /*textContainerNode.bounds.width*/max(textContainerNode.bounds.width, lastLineWidth) + collapseAdjustment, height: bottomY - 35)
             bottomSolidArea.frame = .init(x: 0, y: bottomY - 35, width: lastLineWidth - fadeRadius + collapseAdjustment, height: 35)
             maskGradientLayer.frame = .init(x: bottomSolidArea.frame.maxX, y: bottomY - 35, width: fadeRadius, height: 35)
@@ -429,7 +429,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, transition: ContainedViewLayoutTransition) -> CGSize {
         var shouldRemake = false
         
-        if currentString != string || expandedLayout.rangeToFrame.keys != currentLayout?.rangeToFrame.keys {
+        if currentString != string || expandedLayout.rangeToFrame != currentLayout?.rangeToFrame {
             shouldRemake = true
         }
         if currentString != string {
@@ -532,7 +532,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         guard let expandedLayout = currentLayout else { return }
         // TODO: store
         guard // let string = self.currentString,
-            let adjustedString = self.currentString.flatMap({ reweightString(string: $0, weight: 1 - expansionFraction) }),
+            let adjustedString = self.currentString.flatMap({ reweightString(string: $0, weight: 1 - expansionFraction, in: CALayer()) }),
               let singleLineInfo = /*self.singleLineInfo ?? */ getLayoutLines(adjustedString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
         else { return }
         
@@ -571,7 +571,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            }
             let newWeight = 1 - expansionFraction// expandedWeight * progress + collapsedWeight * (1 - progress)
             let prevString = textFragmentsNode.attributedText!
-            let newString = reweightString(string: textFragmentsNode.attributedText!, weight: newWeight)
+            let newString = reweightString(string: textFragmentsNode.attributedText!, weight: newWeight, in: textFragmentsNode.layer)
             
             if expansionFraction == 1 {
                 currentProgressFrame = expandedFrame
@@ -589,6 +589,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //                   singleLineInfo.glyphRuns.contains(where: { CTRunGetStatus($0).contains(.rightToLeft) }) {
                     offsetX = secondaryOffset - expandedFrame.width// -= actualSize.width
                 }*/
+                // TODO: cache
                 if let glyphRangeIndex = singleLineInfo.glyphRunsRanges.firstIndex(where: { $0.contains(range.location) }), CTRunGetStatus(singleLineInfo.glyphRuns[glyphRangeIndex]).contains(.rightToLeft) {
 //                    var pointBuffer = CGPoint.zero//[CGPoint]()
                     let glyphRun = singleLineInfo.glyphRuns[glyphRangeIndex]
@@ -617,7 +618,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 let collapsedFrame = CGRect(
                     x: offsetX,
                     y: 0,
-                    width: actualSize.width * 1.1,// max(actualSize.width, newString.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: 1000.0), context: nil).width + 4),
+                    width: actualSize.width * (shouldChangeKernForReweight ? 1.1 : 1),// max(actualSize.width, newString.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: 1000.0), context: nil).width + 4),
                     height: actualSize.height)
                 
 //                    let containerBounds = CGRect(x: 0, y: 0, width: totalSize.width, height: totalSize.height)
@@ -719,25 +720,39 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
     }
     
+    /// Performance hit
+    var shouldReweightString: Bool { false }
+    var shouldChangeKernForReweight: Bool { false }
+    var shouldChangeStrokeForReweight: Bool { false }
+    
     /// UIFont.systemFont only, for other fonts use CoreText with variationAxis
-    func reweightString(string: NSAttributedString, weight: CGFloat) -> NSAttributedString {
-//        if pow(2, 2) == 4 {
-//            return string
-//        }
+    func reweightString(string: NSAttributedString, weight: CGFloat, in layer: CALayer) -> NSAttributedString {
+        guard shouldReweightString else {
+            return string
+        }
+        
         guard string.length > 0, let strokeColor = string.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? UIColor
         else { return string }
+        
+//        layer.shadowColor = strokeColor.cgColor
+//        layer.shadowOffset = .zero
+//        layer.shadowOpacity = Float(weight)
+//        layer.shadowRadius = 0.3 // weight
         
         let reweightString = NSMutableAttributedString(attributedString: string)
         let stringRange = NSRange.init(location: 0, length: reweightString.length)
         // Faking weight with stroke
         if weight > 0 {
-            reweightString.addAttribute(.strokeColor, value: strokeColor, range: stringRange)
-            // Assuming weight passed changes from actual base value to 1 representing final value (from regular to semibold omitting thinner and thicker values)
-            let strokeRegularToSemiboldCoeff: CGFloat = 2.5
-            reweightString.addAttribute(.strokeWidth, value: -weight * strokeRegularToSemiboldCoeff, range: stringRange)
-            
-            let kernRegularToSemiboldCoeff: CGFloat = 1.0
-            reweightString.addAttribute(.kern, value: weight * kernRegularToSemiboldCoeff, range: stringRange)
+            if shouldChangeStrokeForReweight {
+                reweightString.addAttribute(.strokeColor, value: strokeColor, range: stringRange)
+                // Assuming weight passed changes from actual base value to 1 representing final value (from regular to semibold omitting thinner and thicker values)
+                let strokeRegularToSemiboldCoeff: CGFloat = 2.0
+                reweightString.addAttribute(.strokeWidth, value: -weight * strokeRegularToSemiboldCoeff, range: stringRange)
+            }
+            if shouldChangeKernForReweight {
+                let kernRegularToSemiboldCoeff: CGFloat = 1.0
+                reweightString.addAttribute(.kern, value: weight * kernRegularToSemiboldCoeff, range: stringRange)
+            }
         } else {
             reweightString.removeAttribute(.strokeColor, range: stringRange)
             reweightString.removeAttribute(.strokeWidth, range: stringRange)
