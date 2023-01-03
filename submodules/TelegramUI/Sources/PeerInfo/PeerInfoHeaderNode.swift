@@ -3462,6 +3462,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
+        var remainScaledFade: Bool { false }
         let offsetBehindRightButton: CGFloat = 44
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
@@ -3498,7 +3499,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //            if isAvatarExpanded {
 //                symmetricCollapsedMaxX = min(transitionSourceTitleFrame.width / 0.7, singleLineSize.width)
 //            } else {
-            symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
+            symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ remainScaledFade ? titleFrame.width : min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
 //            }
             let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
@@ -3528,7 +3529,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 origin: CGPoint(
                     x: titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
                     y: floor((titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0),
-                size: titleExpandedCredibilityIconSize).offsetBy(dx: thicInvertedNodeFrame.minX, dy: thicInvertedNodeFrame.minY))
+                size: titleExpandedCredibilityIconSize)
+                .offsetBy(dx: thicInvertedNodeFrame.minX, dy: thicInvertedNodeFrame.minY))
         }
         
         if !titleSize.width.isZero && !titleSize.height.isZero {
@@ -3597,7 +3599,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
-                let singleMidX = isAvatarExpanded ? (0/*16*/ + xWidth / 2) : titleFrame.midX
+                let singleMidX = isAvatarExpanded ? (0 + xWidth / 2) : titleFrame.midX
                 let singleLineTitleCenter = CGPoint(
                     x: transitionFraction * (transitionSourceTitleFrame.midX) + (1.0 - transitionFraction) * singleMidX,
                     y: transitionFraction * (transitionSourceTitleFrame.midY) + (1.0 - transitionFraction) * (titleFrame.midY - titleFrame.height / 2 + singleLineTitleHeight / 2)
@@ -3657,16 +3659,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 let offsetForCredibilityIcon = self.credibilityIconSize.flatMap { $0.width } ?? 0
                 
-                self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - /*offsetBehindRightButton * (currentTitleCollapseFraction)*/offsetForCredibilityIcon * currentTitleCollapseFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                var leadingButtonOffset: CGFloat { 52 }
+                var trailingButtonOffset: CGFloat { 44.0 }
+                
+                let titleConstrainedWidth = titleConstrainedSize.width * (1.0 - titleCollapseFraction) + (width - leadingButtonOffset - trailingButtonOffset) * titleCollapseFraction
+                
+                self.titleNode.updateFading(availableWidth: titleConstrainedWidth / (remainScaledFade ? 1 : titleScale) - /*offsetBehindRightButton * (currentTitleCollapseFraction)*/offsetForCredibilityIcon * currentTitleCollapseFraction, containerWidth: titleConstrainedWidth / (remainScaledFade ? 1 : titleScale), height: titleFrame.height)
                 // let grownWidth = singleLineSize.width - min(titleFrame.width, titleConstrainedSize.width)
 //                let overlayableGradientWidth: CGFloat = 18.0
                 class GlobalText {
                     static let main = GlobalText()
                     var value: CGFloat = 36
                 }
-                let constrainedCollapsedWidth: CGFloat = min(singleLineSize.width, titleConstrainedSize.width)
-                let collapsedMinX: CGFloat = titleFrame.midX - constrainedCollapsedWidth / 2// GlobalText.main.value // max(titleFrame.midX - titleConstrainedSize.width / 2, titleFrame.midX - singleLineSize.width / 2)
                 
+                var asymmetricalOffsetForFullWidth: CGFloat { 8 }
+                
+                let constrainedCollapsedWidth: CGFloat = remainScaledFade ? titleFrame.width : min(singleLineSize.width, titleConstrainedWidth)
+                let totalTitleContainerOffset: CGFloat = remainScaledFade ? titleFrame.width : min(singleLineSize.width, titleConstrainedWidth + (self.credibilityIconSize.flatMap { $0 == .zero ? nil : ($0.width + 4.0) * titleScale } ?? 0))
+//                let widthDiff = totalTitleContainerOffset /
+                let collapsedMinX: CGFloat = titleFrame.midX - totalTitleContainerOffset / 2// GlobalText.main.value // max(titleFrame.midX - titleConstrainedSize.width / 2, titleFrame.midX - singleLineSize.width / 2)
+//                titleConstrainedSize.width / titleScale
                 rawTitleFrame = CGRect(
                     x: /*singleLineTitleFrame.minX*/collapsedMinX * currentTitleCollapseFraction + titleFrame.minX * (1.0 - currentTitleCollapseFraction),
                     y: (titleFrame.minY/* + titleOffsetForCenteredSingleLine*/) * currentTitleCollapseFraction + titleFrame.minY * (1.0 - currentTitleCollapseFraction),
@@ -3675,8 +3687,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 ).offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0) // titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
                 self.titleNodeRawContainer.frame = rawTitleFrame
 //                self.titleNodeRawContainer.backgroundColor = .red
-                let singleLineOffset: CGFloat = collapsedMinX - titleFrame.minX
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                let initialCenterOffset = -titleFrame.width / 2
+//                let newCenterOffset = -totalTitleContainerOffset / 2
+                let offsetWithinTextNode: CGFloat = (-constrainedCollapsedWidth / 2 - initialCenterOffset) * titleCollapseFraction
+                let externalOffset: CGFloat = 0 // -(min(titleConstrainedWidth / titleScale, singleLineSize.width) - min(titleConstrainedWidth, singleLineSize.width)) / 2 - offsetWithinTextNode
+                let singleLineOffset: CGFloat = externalOffset // newCenterOffset - initialCenterOffset //totalTitleContainerOffset / 2// collapsedMinX - titleFrame.minX
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: offsetWithinTextNode, y: 0), size: CGSize()))
                 
                 let subtitleFrameForCollapsedTitle = CGRect(x: subtitleFrame.minY, y: singleLineTitleFrame.maxY + 1.0, width: subtitleFrame.width, height: subtitleFrame.height)
                 let subtitleBetweenCollapsedAndExpandedCoeff: CGFloat = 1// 0.5
@@ -3698,12 +3714,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transition.updateFrameAdditive(node: self.usernameNodeContainer, frame: CGRect(origin: rawUsernameFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 } else {
                     let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
-                    transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(
-                        origin: CGPoint(x: rawTitleFrame.center.x + singleLineOffset * currentTitleCollapseFraction, y: rawTitleFrame.center.y + titleOffsetForCenteredSingleLine * currentTitleCollapseFraction),
-                        size: CGSize())
+                    transition.updateFrame(node: self.titleNodeContainer, frame: CGRect(
+                        origin: CGPoint(x: rawTitleFrame.midX + singleLineOffset * currentTitleCollapseFraction, y: rawTitleFrame.midY + titleOffsetForCenteredSingleLine * currentTitleCollapseFraction),
+                        size: CGSize(width: 0, height: 0))
                         .offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
-                    
+                    self.titleNodeContainer.backgroundColor = .red.withAlphaComponent(0.2)
                     var subtitleCenter = rawSubtitleFrame.center
+                    // titleFrame.midX + (titleFrame.midX - )
                     subtitleCenter.x = rawTitleFrame.center.x + (subtitleCenter.x - rawTitleFrame.center.x) * subtitleScale
                     subtitleCenter.y += subtitleOffset
                     transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: subtitleCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))

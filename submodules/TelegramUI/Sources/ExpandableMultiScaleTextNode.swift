@@ -121,7 +121,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         let gradientRadius: CGFloat = 30
         
         let solidPartLayer = CALayer()
-        solidPartLayer.backgroundColor = UIColor.black.cgColor
+        solidPartLayer.backgroundColor = UIColor.blue.cgColor
         if singleLineInfo.isRTL {
             // TODO: fix rtl layout offsets
             let adjustForRTL: CGFloat = 12
@@ -138,7 +138,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         gradientFadeMask.addSublayer(solidPartLayer)
         
         let gradientLayer = CAGradientLayer()
-        gradientLayer.colors = [UIColor.black.cgColor, UIColor.clear.cgColor]
+        gradientLayer.colors = [UIColor.blue.cgColor, UIColor.clear.cgColor]
         if singleLineInfo.isRTL {
             gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
@@ -157,7 +157,9 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             offsetX = 0
         }
         gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX, y: -height / 2, width: availableWidth + gradientRadius, height: height)
-        fadableContainerNode.layer.mask = gradientFadeMask
+        gradientFadeMask.opacity = 0.4
+        fadableContainerNode.layer.addSublayer(gradientFadeMask)
+//        fadableContainerNode.layer.mask = gradientFadeMask
     }
 //
 //    // Temporary convenience
@@ -626,10 +628,10 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 let yProgress = sqrt(1 - (expansionFraction - 1) * (expansionFraction - 1))
                 let xProgress = expansionFraction // 1 - sqrt(1 - progress * progress)
                 currentProgressFrame = CGRect(
-                    x: expandedFrame.origin.x * xProgress - collapsedFrame.origin.x * (xProgress - 1),
-                    y: expandedFrame.origin.y * yProgress - collapsedFrame.origin.y * (yProgress - 1),
-                    width: expandedFrame.width * expansionFraction - collapsedFrame.width * (expansionFraction - 1),
-                    height: expandedFrame.height * expansionFraction - collapsedFrame.height * (expansionFraction - 1)
+                    x: expandedFrame.origin.x * xProgress + collapsedFrame.origin.x * (1 - xProgress),
+                    y: expandedFrame.origin.y * yProgress + collapsedFrame.origin.y * (1 - yProgress),
+                    width: expandedFrame.width * expansionFraction + collapsedFrame.width * (1 - expansionFraction),
+                    height: expandedFrame.height * expansionFraction + collapsedFrame.height * (1 - expansionFraction)
                 )
             }
             
@@ -651,10 +653,12 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             // TODO: decide on whether to stick to node.updateLayout() size or CTLine size
 //            textFragmentsNode.layer.masksToBounds = false
             _ = textFragmentsNode.updateLayout(expandedLayout.constrainedSize)
+            textFragmentsNode.backgroundColor = UIColor.red.withAlphaComponent(0.2)
             textFragmentsNode.attributedText = prevString
 //            textFragmentsNode.backgroundColor = UIColor.red.withAlphaComponent(0.2)
 //            _ = textFragmentsNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)/*currentProgressFrame.size*/)// CGSize(width: totalSize.width, height: totalSize.height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
         }
+        self.textContainer.backgroundColor = .green.withAlphaComponent(0.3)
         prevExpansion = expansionFraction
     }
 //
