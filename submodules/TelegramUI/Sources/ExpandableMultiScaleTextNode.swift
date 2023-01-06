@@ -84,7 +84,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
     
 //    var alignedNodeSingleLineInfo: (key: AnyHashable, info: [LayoutLine])?
     
-    func updateFading(availableWidth: CGFloat, containerWidth: CGFloat, height: CGFloat) {
+    func updateFading(solidWidth: CGFloat, containerWidth: CGFloat, height: CGFloat) {
         self.textSubnodes.forEach { $0.value.updateContainerFading() }
         
         gradientFadeMask.removeFromSuperlayer()
@@ -128,12 +128,12 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             // TODO: remove safe
             let safeSolidWidth: CGFloat = containerWidth + adjustForRTL
             solidPartLayer.frame = CGRect(
-                origin: CGPoint(x: max(containerWidth - availableWidth, gradientRadius), y: 0),
+                origin: CGPoint(x: max(containerWidth - solidWidth, gradientRadius), y: 0),
                 size: CGSize(width: safeSolidWidth, height: height))
         } else {
             solidPartLayer.frame = CGRect(
                 origin: .zero,
-                size: CGSize(width: availableWidth, height: height))
+                size: CGSize(width: solidWidth + gradientInset, height: height))
         }
         gradientFadeMask.addSublayer(solidPartLayer)
         
@@ -146,7 +146,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         } else {
             gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-            gradientLayer.frame = CGRect(x: availableWidth + gradientInset, y: 0, width: gradientRadius, height: height)
+            gradientLayer.frame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius, height: height)
         }
         gradientFadeMask.addSublayer(gradientLayer)
         gradientFadeMask.masksToBounds = false
@@ -156,7 +156,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         } else {
             offsetX = 0
         }
-        gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX, y: -height / 2, width: availableWidth + gradientRadius, height: height)
+        gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX, y: -height / 2, width: solidWidth + gradientInset + gradientRadius, height: height)
         fadableContainerNode.layer.mask = gradientFadeMask
     }
 //
@@ -458,6 +458,10 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //
 //                }
 //            }
+            // Split into separate letters
+//            let lines = getLayoutLines(string, textSize: expandedLayout.constrainedSize)
+//            lines.forEach { line in
+//            }
             
             for (index, (range, _)) in expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).enumerated() {
                 let substring = string.attributedSubstring(from: range)
@@ -594,6 +598,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //                    var pointBuffer = CGPoint.zero//[CGPoint]()
                     let glyphRun = singleLineInfo.glyphRuns[glyphRangeIndex]
                     let runRange = CTRunGetStringRange(glyphRun)
+                    // TODO: research if always matches
                     let positions = UnsafeMutablePointer<CGPoint>.allocate(capacity: runRange.length)
                     
                     CTRunGetPositions(glyphRun, CFRangeMake(0, range.length), positions)

@@ -3462,7 +3462,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
-        let offsetBehindRightButton: CGFloat = 44
+        // let offsetBehindRightButton: CGFloat = 44
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
             titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
@@ -3531,10 +3531,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 size: titleExpandedCredibilityIconSize).offsetBy(dx: thicInvertedNodeFrame.minX, dy: thicInvertedNodeFrame.minY))
         }
         
+        let rawTitleFrame: CGRect
+        var offsetBehindRightButton: CGFloat { 44.0 }
         if !titleSize.width.isZero && !titleSize.height.isZero {
-            let rawTitleFrame: CGRect
             if self.navigationTransition != nil {
-//                self.titleNode.updateExpansion(progress: 1.0 - transitionFraction, transition: transition)
+                //                self.titleNode.updateExpansion(progress: 1.0 - transitionFraction, transition: transition)
                 self.titleNode.textSubnodes.forEach {
                     $0.value.updateExpansion(fraction: 1.0 - transitionFraction, transition: transition)
                 }
@@ -3543,23 +3544,230 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 var neutralSubtitleScale: CGFloat = 1.0
                 if self.isAvatarExpanded {
                     neutralTitleScale = 0.7
-                    neutralSubtitleScale = 1.0
+                    neutralSubtitleScale = 1.1
                 }
                 let singleLineBoundsNode = ImmediateTextNode()
                 singleLineBoundsNode.attributedText = titleString
                 let singleSize = singleLineBoundsNode.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: 40))
                 // TODO: get actual
                 let singleLineTitleHeight: CGFloat = singleSize.height // titleFrame.height
-//                let signleLineTitleWidth: CGFloat =
+                //                let signleLineTitleWidth: CGFloat =
                 let titleScale = (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * singleLineTitleHeight * neutralTitleScale) / (singleLineTitleHeight) // (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * titleFrame.height * neutralTitleScale) / (titleFrame.height)
                 let finalTitleScale = transitionSourceTitleFrame.height / (singleLineTitleHeight)
-                let extraSubtitleScale: CGFloat = 1.1
-                let subtitleScale = max(0.01, min(10.0, (transitionFraction * transitionSourceSubtitleFrame.height * extraSubtitleScale + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)))
                 
-//                let finalToCurrentFrameHeightScale = (1 * transitionSourceTitleFrame.height + (1.0 - 1) * titleFrame.height * neutralTitleScale) / titleFrame.height
+                var transitionSourceSubtitleFrame: CGRect = transitionSourceSubtitleFrame
+                // Accounting ofr when there is no subtitle in chat
+                if transitionSourceTitleFrame.height < .ulpOfOne {
+                    transitionSourceSubtitleFrame = subtitleFrame
+                }
+                
+                let subtitleScale = max(0.01, min(10.0, (transitionFraction * transitionSourceSubtitleFrame.height + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)))
+                
+                //                let finalToCurrentFrameHeightScale = (1 * transitionSourceTitleFrame.height + (1.0 - 1) * titleFrame.height * neutralTitleScale) / titleFrame.height
                 var titleFrame = titleFrame
-//                let collapseTransitionOffset = (titleFrame.height / 2 - transitionSourceTitleFrame.height / 2) * finalTitleScale
+                //                let collapseTransitionOffset = (titleFrame.height / 2 - transitionSourceTitleFrame.height / 2) * finalTitleScale
                 
+                if !self.isAvatarExpanded {
+                    titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
+                }
+                
+                let trailingIconWidth: CGFloat
+                if let credibilityIconSize = self.credibilityIconSize {
+                    trailingIconWidth = credibilityIconSize.width
+                } else {
+                    trailingIconWidth = 0
+                }
+                
+                let singleLineCenterX = singleSize.width / 2
+                let newCenterX = min(singleLineCenterX * finalTitleScale, transitionSourceTitleFrame.width / 2)
+                let newCenterY = min(singleSize.height / 2 * finalTitleScale, transitionSourceTitleFrame.height / 2)
+                //                let collapseTransitionOffsetX = (titleFrame.width / 2 * finalTitleScale - transitionSourceTitleFrame.width / 2)
+                //                let collapsedTitleHeight: CGFloat
+                let widthDiff: CGFloat = newCenterX - titleFrame.width / 2 * finalTitleScale // (transitionSourceTitleFrame.width - max(titleFrame.width * finalTitleScale, transitionSourceTitleFrame.width))
+                let heightDiff: CGFloat = newCenterY - titleFrame.height / 2 * finalTitleScale// transitionSourceTitleFrame.height - max(titleFrame.height * finalTitleScale, transitionSourceTitleFrame.height)
+                let titleCenter = CGPoint(
+                    x: transitionFraction * (transitionSourceTitleFrame.midX - widthDiff - trailingIconWidth / 2) + (1.0 - transitionFraction) * titleFrame.midX,
+                    y: transitionFraction * (transitionSourceTitleFrame.midY - heightDiff) + (1.0 - transitionFraction) * (titleFrame.midY))
+                
+                let subtitleCenter = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX, y: transitionFraction * transitionSourceSubtitleFrame.midY + (1.0 - transitionFraction) * subtitleFrame.midY)
+                
+                rawTitleFrame = CGRect(
+                    origin: CGPoint(
+                        x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,
+                        y: titleCenter.y - titleFrame.size.height * neutralTitleScale / 2.0),
+                    size: CGSize(
+                        width: (titleFrame.size.width + trailingIconWidth * transitionFraction) * neutralTitleScale,
+                        height: titleFrame.size.height * neutralTitleScale
+                    )
+                )
+                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                
+                let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
+                let singleMidX = isAvatarExpanded ? (0/*16*/ + xWidth / 2) : titleFrame.midX
+                let singleLineTitleCenter = CGPoint(
+                    x: transitionFraction * (transitionSourceTitleFrame.midX) + (1.0 - transitionFraction) * singleMidX,
+                    y: transitionFraction * (transitionSourceTitleFrame.midY) + (1.0 - transitionFraction) * (titleFrame.midY - titleFrame.height / 2 + singleLineTitleHeight / 2)
+                )
+                
+                let someTitleOriginX = rawTitleFrame.minX// titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0
+                //                let testSourceTitleFrame = navigationTransition!.sourceTitleView.frame
+                let navBarTitleTransitionFrame = CGRect(
+                    origin: CGPoint(
+                        x: transitionSourceTitleFrame.minX * transitionFraction + (1.0 - transitionFraction) * (/*singleLineTitleFrame.minX * transitionFraction + */someTitleOriginX /** (1.0 - transitionFraction)*/),//*titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,*/ /*(singleLineTitleCenter.x) - xWidth * neutralTitleScale / 2.0*/,
+                        y: (singleLineTitleCenter.y) - singleSize.height * neutralTitleScale / 2.0),
+                    size: CGSize(
+                        width: transitionSourceTitleFrame.width * transitionFraction + (1.0 - transitionFraction) * xWidth * neutralTitleScale,
+                        height: singleSize.height * neutralTitleScale
+                    )
+                )
+                print(rawTitleFrame)
+                self.titleNodeRawContainer.frame = navBarTitleTransitionFrame// navBarTitleTransitionFrame
+                transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()))
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                
+                let rawSubtitleFrame = CGRect(origin: CGPoint(x: subtitleCenter.x - subtitleFrame.size.width / 2.0, y: subtitleCenter.y - subtitleFrame.size.height / 2.0), size: subtitleFrame.size)
+                self.subtitleNodeRawContainer.frame = rawSubtitleFrame
+                transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()))
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.nextPanelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
+                transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
+                transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
+                
+                
+                //                let opacity: Float = (isAvatarExpanded ? (1.0 - Float(transitionFraction)) : 0)
+                //                self.titleNode.stateNode(forKey: TitleNodeStateExpanded)?.layer.opacity = opacity
+            } else {
+                let transitionDeadZone: CGFloat = 0.5
+                let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
+                //                self.titleNode.updateExpansion(progress: 1.0 - titleCollapseFraction * (1 - transitionDeadZone), transition: transition)
+                self.titleNode.textSubnodes.forEach {
+                    $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, transition: transition)
+                }
+                
+                //                let singleLineTitleHeight: CGFloat = 35
+                
+                let titleScale: CGFloat
+                let subtitleScale: CGFloat
+                var subtitleOffset: CGFloat = 0.0
+                if self.isAvatarExpanded {
+                    titleScale = 0.7
+                    subtitleScale = 1.0
+                } else {
+                    titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
+                    subtitleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * subtitleMinScale
+                    subtitleOffset = titleCollapseFraction * -2.0
+                }
+                
+                
+                let offsetForCredibilityIcon = self.credibilityIconSize.flatMap { $0 == .zero ? nil : $0.width + 4.0 } ?? 0
+                
+                let resultWidth = min(singleLineSize.width, titleConstrainedSize.width/* - offsetForCredibilityIcon*/)//  + 36 / 2)
+                
+                let fadeGradientRadius: CGFloat = max(offsetForCredibilityIcon * currentTitleCollapseFraction, 30.0)
+                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width/* / titleScale*/ - fadeGradientRadius, containerWidth: titleConstrainedSize.width/* / titleScale*/, height: titleFrame.height)
+                
+                // self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction) / 2, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                let fadeOffsetForVisualSymmetry: CGFloat = 0.0
+                
+                let collapsedMinX = titleFrame.midX - min(singleLineSize.width, titleConstrainedSize.width + max(offsetForCredibilityIcon, fadeOffsetForVisualSymmetry)) / 2
+                
+                // TODO: other algorithm
+                let titleIsMultiline = titleFrame.height >= singleLineSize.height * 2
+                
+                let offsetWithinTitleNode: CGFloat
+                
+                if titleIsMultiline && titleFrame.width < resultWidth {
+                    // Needs adjustment
+                    offsetWithinTitleNode = -(resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
+                } else {
+                    offsetWithinTitleNode = 0.0
+                }
+                
+                let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
+                
+                rawTitleFrame = CGRect(
+                    x: /*singleLineTitleFrame.minX*/collapsedMinX * currentTitleCollapseFraction + titleFrame.minX * (1.0 - currentTitleCollapseFraction),
+                    y: (titleFrame.minY/* + titleOffsetForCenteredSingleLine*/) * currentTitleCollapseFraction + titleFrame.minY * (1.0 - currentTitleCollapseFraction),
+                    width: singleLineTitleFrame.width * currentTitleCollapseFraction + titleFrame.width * (1.0 - currentTitleCollapseFraction),
+                    height: singleLineTitleFrame.height * currentTitleCollapseFraction + titleFrame.height * (1.0 - currentTitleCollapseFraction)
+                ).offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0) // titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
+                self.titleNodeRawContainer.frame = rawTitleFrame
+                //                self.titleNodeRawContainer.backgroundColor = .red
+               //  let singleLineOffset = collapsedMinX - titleFrame.minX
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: offsetWithinTitleNode, y: 0), size: CGSize()))
+                
+                let subtitleFrameForCollapsedTitle = CGRect(x: subtitleFrame.minY, y: singleLineTitleFrame.maxY + 1.0, width: subtitleFrame.width, height: subtitleFrame.height)
+                let subtitleBetweenCollapsedAndExpandedCoeff: CGFloat = 1// 0.5
+                
+                let subtitleForCollapsedTitleFraction = currentTitleCollapseFraction * subtitleBetweenCollapsedAndExpandedCoeff
+                let rawSubtitleFrame = CGRect(
+                    x: subtitleFrame.minX/*subtitleFrameForCollapsedTitle.minX * subtitleForCollapsedTitleFraction + subtitleFrame.minX * (1.0 - subtitleForCollapsedTitleFraction)*/,
+                    y: subtitleFrameForCollapsedTitle.minY * subtitleForCollapsedTitleFraction + subtitleFrame.minY * (1.0 - subtitleForCollapsedTitleFraction),
+                    width: subtitleFrame.width/*subtitleFrameForCollapsedTitle.width * subtitleForCollapsedTitleFraction + subtitleFrame.width * (1.0 - subtitleForCollapsedTitleFraction)*/,
+                    height: subtitleFrame.height/*subtitleFrameForCollapsedTitle.height * subtitleForCollapsedTitleFraction + subtitleFrame.height * (1.0 - subtitleForCollapsedTitleFraction)*/
+                ) // subtitleFrame
+                // ^ only origin y matters
+                self.subtitleNodeRawContainer.frame = rawSubtitleFrame
+                let rawUsernameFrame = usernameFrame
+                self.usernameNodeRawContainer.frame = rawUsernameFrame
+                if self.isAvatarExpanded {
+                    transition.updateFrameAdditive(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                    transition.updateFrameAdditive(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                    transition.updateFrameAdditive(node: self.usernameNodeContainer, frame: CGRect(origin: rawUsernameFrame.center, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                } else {
+                    transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: CGPoint(x: rawTitleFrame.center.x/* + singleLineOffset * currentTitleCollapseFraction*/, y: rawTitleFrame.center.y + titleOffsetForCenteredSingleLine * currentTitleCollapseFraction), size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset + apparentTitleLockOffset))
+                    
+                    var subtitleCenter = rawSubtitleFrame.center
+                    subtitleCenter.x = rawTitleFrame.center.x + (subtitleCenter.x - rawTitleFrame.center.x) * subtitleScale
+                    subtitleCenter.y += subtitleOffset
+                    transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: subtitleCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                    
+                    var usernameCenter = rawUsernameFrame.center
+                    usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
+                    transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
+                }
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.nextPanelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
+                transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
+                transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
+            }
+            
+            
+            /*
+             let rawTitleFrame: CGRect
+             if self.navigationTransition != nil {
+             //                self.titleNode.updateExpansion(progress: 1.0 - transitionFraction, transition: transition)
+             self.titleNode.textSubnodes.forEach {
+             $0.value.updateExpansion(fraction: 1.0 - transitionFraction, transition: transition)
+             }
+             
+             var neutralTitleScale: CGFloat = 1.0
+             var neutralSubtitleScale: CGFloat = 1.0
+             if self.isAvatarExpanded {
+             neutralTitleScale = 0.7
+             neutralSubtitleScale = 1.0
+             }
+             let singleLineBoundsNode = ImmediateTextNode()
+             singleLineBoundsNode.attributedText = titleString
+             let singleSize = singleLineBoundsNode.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: 40))
+             // TODO: get actual
+             let singleLineTitleHeight: CGFloat = singleSize.height // titleFrame.height
+             //                let signleLineTitleWidth: CGFloat =
+             let titleScale = (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * singleLineTitleHeight * neutralTitleScale) / (singleLineTitleHeight) // (transitionFraction * transitionSourceTitleFrame.height + (1.0 - transitionFraction) * titleFrame.height * neutralTitleScale) / (titleFrame.height)
+             let finalTitleScale = transitionSourceTitleFrame.height / (singleLineTitleHeight)
+             let extraSubtitleScale: CGFloat = 1.1
+             let subtitleScale = max(0.01, min(10.0, (transitionFraction * transitionSourceSubtitleFrame.height * extraSubtitleScale + (1.0 - transitionFraction) * subtitleFrame.height * neutralSubtitleScale) / (subtitleFrame.height)))
+             
+             //                let finalToCurrentFrameHeightScale = (1 * transitionSourceTitleFrame.height + (1.0 - 1) * titleFrame.height * neutralTitleScale) / titleFrame.height
+             var titleFrame = titleFrame
+             //                let collapseTransitionOffset = (titleFrame.height / 2 - transitionSourceTitleFrame.height / 2) * finalTitleScale
+             
                 if !self.isAvatarExpanded {
                     titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
                 }
@@ -3719,7 +3927,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
-            }
+            }*/
             
             let commonRoot = self.layer
             var usesActualAvatarMask: Bool { false }
