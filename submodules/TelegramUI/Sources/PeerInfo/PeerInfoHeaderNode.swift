@@ -2851,6 +2851,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let textSideInset: CGFloat = 36.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
+        // Accounting for difference in font weight
         let expandedExtraWidth: CGFloat = isAvatarExpanded ? 8 : 0
         let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0) + expandedExtraWidth, height: .greatestFiniteMagnitude)
         
@@ -3493,12 +3494,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             // print(test_realTitleWidth!)
 //            let titleScale = (1.0 - collapseFraction) * 1.0 + collapseFraction * titleMinScale
 //            let availableWidth = titleConstrainedSize.width / titleScale - offsetBehindRightButton * (collapseFraction)
-            let gradientRadius: CGFloat = 36
+            // let gradientRadius: CGFloat = 36
             let symmetricCollapsedMaxX: CGFloat
 //            if isAvatarExpanded {
 //                symmetricCollapsedMaxX = min(transitionSourceTitleFrame.width / 0.7, singleLineSize.width)
 //            } else {
-            symmetricCollapsedMaxX = /*titleFrame.width / 2 +*/ min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
+            symmetricCollapsedMaxX = min(singleLineSize.width, titleConstrainedSize.width) /*titleFrame.width / 2 +*/ // min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
 //            }
             let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
@@ -3544,7 +3545,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 var neutralSubtitleScale: CGFloat = 1.0
                 if self.isAvatarExpanded {
                     neutralTitleScale = 0.7
-                    neutralSubtitleScale = 1.1
+                    neutralSubtitleScale = 1 + 0.1 * transitionFraction
                 }
                 let singleLineBoundsNode = ImmediateTextNode()
                 singleLineBoundsNode.attributedText = titleString
@@ -3557,7 +3558,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 var transitionSourceSubtitleFrame: CGRect = transitionSourceSubtitleFrame
                 // Accounting ofr when there is no subtitle in chat
-                if transitionSourceTitleFrame.height < .ulpOfOne {
+                if transitionSourceSubtitleFrame.height < .ulpOfOne {
                     transitionSourceSubtitleFrame = subtitleFrame
                 }
                 
@@ -3666,13 +3667,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 let resultWidth = min(singleLineSize.width, titleConstrainedSize.width/* - offsetForCredibilityIcon*/)//  + 36 / 2)
                 
-                let fadeGradientRadius: CGFloat = max(offsetForCredibilityIcon * currentTitleCollapseFraction, 30.0)
-                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width/* / titleScale*/ - fadeGradientRadius, containerWidth: titleConstrainedSize.width/* / titleScale*/, height: titleFrame.height)
+                let fadeGradientRadius: CGFloat
+                fadeGradientRadius = max(offsetForCredibilityIcon * currentTitleCollapseFraction, 30.0)
+                
+                let fadeOffsetForVisualSymmetry: CGFloat
+                if offsetForCredibilityIcon < .ulpOfOne {
+                    fadeOffsetForVisualSymmetry = fadeGradientRadius / 2// / 2.0
+                } else {
+                    fadeOffsetForVisualSymmetry = 0.0
+                }
+                
+                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width /* / titleScale*/ + fadeOffsetForVisualSymmetry, containerWidth: titleConstrainedSize.width + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height)
                 
                 // self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction) / 2, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
-                let fadeOffsetForVisualSymmetry: CGFloat = 0.0
                 
-                let collapsedMinX = titleFrame.midX - min(singleLineSize.width, titleConstrainedSize.width + max(offsetForCredibilityIcon, fadeOffsetForVisualSymmetry)) / 2
+                let collapsedMinX = titleFrame.midX - min(singleLineSize.width, titleConstrainedSize.width/* + max(offsetForCredibilityIcon, 0.0/*fadeOffsetForVisualSymmetry*/)*/) / 2
                 
                 // TODO: other algorithm
                 let titleIsMultiline = titleFrame.height >= singleLineSize.height * 2
