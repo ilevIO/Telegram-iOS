@@ -2854,7 +2854,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         // Accounting for difference in font weight
         let expandedExtraWidth: CGFloat = isAvatarExpanded ? 8 : 0
         let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0) + expandedExtraWidth, height: .greatestFiniteMagnitude)
-        
+        let subtitleConstrainedSize = CGSize(width: titleConstrainedSize.width - 8.0, height: CGFloat.greatestFiniteMagnitude)
 //        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
 //        let titleNodeLayout = self.titleNode.updateLayout(text: titleStringText, states: [
@@ -2890,9 +2890,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         //////////////////////////////
         
         let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize),
-            TitleNodeStateNavTransitionSupport: MultiScaleTextState(attributes: invertedSubtitleAttributes, constrainedSize: titleConstrainedSize)
+            TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: subtitleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: subtitleConstrainedSize),
+            TitleNodeStateNavTransitionSupport: MultiScaleTextState(attributes: invertedSubtitleAttributes, constrainedSize: subtitleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleStringText
         
@@ -3501,7 +3501,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //            } else {
             symmetricCollapsedMaxX = min(singleLineSize.width, titleConstrainedSize.width) /*titleFrame.width / 2 +*/ // min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
 //            }
-            let finalTitleWidth: CGFloat = navigationTransition != nil ? symmetricCollapsedMaxX/*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
+            let finalTitleWidth: CGFloat = navigationTransition != nil ?
+                (transitionSourceTitleFrame.width / titleMinScale)
+            /*symmetricCollapsedMaxX*//*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
@@ -3676,8 +3678,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     fadeOffsetForVisualSymmetry = 0.0
                 }
-                
-                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width /* / titleScale*/ + fadeOffsetForVisualSymmetry, containerWidth: titleConstrainedSize.width + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height)
+                // TODO: mind offsetWithinTitleNode
+                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width /* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: titleConstrainedSize.width + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height)
                 
                 // self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction) / 2, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
@@ -3689,8 +3691,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let offsetWithinTitleNode: CGFloat
                 
                 if titleIsMultiline && titleFrame.width < resultWidth {
+                    // TODO: replace
+                    let titleIsRTL = titleNode.textSubnodes.first?.value.currentLayout?.lines[0].isRTL == true
                     // Needs adjustment
-                    offsetWithinTitleNode = -(resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
+                    if titleIsRTL {
+                        offsetWithinTitleNode = (resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
+                    } else {
+                        offsetWithinTitleNode = -(resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
+                    }
                 } else {
                     offsetWithinTitleNode = 0.0
                 }
@@ -4005,7 +4013,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let path = UIBezierPath(cgPath: maskPath) // (roundedRect: frameInside, cornerRadius: avatarListNode.listContainerNode.layer.cornerRadius)
                 let invertedTitleMask = CAShapeLayer()
                 invertedTitleMask.masksToBounds = false
-                path.append(UIBezierPath(rect: .init(x: 0, y: 0, width: 2000, height: 2000)))
+                let extraInsetForRTL: CGFloat = 1000
+                path.append(UIBezierPath(rect: .init(x: -extraInsetForRTL, y: 0, width: layer.bounds.width + extraInsetForRTL * 2, height: 2000)))
                 invertedTitleMask.fillRule = .evenOdd
                 invertedTitleMask.path = path.cgPath
                 invertedTitleMask.fillColor = UIColor.black.cgColor
