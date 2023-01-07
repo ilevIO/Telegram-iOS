@@ -84,7 +84,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
     
 //    var alignedNodeSingleLineInfo: (key: AnyHashable, info: [LayoutLine])?
     
-    func updateFading(solidWidth: CGFloat, containerWidth: CGFloat, height: CGFloat) {
+    func updateFading(solidWidth: CGFloat, containerWidth: CGFloat, height: CGFloat, offset: CGFloat) {
         self.textSubnodes.forEach { $0.value.updateContainerFading() }
         
         gradientFadeMask.removeFromSuperlayer()
@@ -146,20 +146,21 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         } else {
             gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-            gradientLayer.frame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius, height: height)
+            var adjustmentCoof: CGFloat { 1.5 }
+            gradientLayer.frame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius * adjustmentCoof, height: height)
         }
-//        gradientLayer.backgroundColor = UIColor.black.withAlphaComponent(0.4).cgColor
+      //  gradientLayer.backgroundColor = UIColor.black.withAlphaComponent(0.4).cgColor
         gradientFadeMask.addSublayer(gradientLayer)
         gradientFadeMask.masksToBounds = false
         let offsetX: CGFloat
         if singleLineInfo.isRTL {
-            offsetX = -gradientRadius
+            offsetX = 0// -gradientRadius
         } else {
             offsetX = 0
         }
-        gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX, y: -height / 2, width: solidWidth + gradientInset + gradientRadius, height: height)
+        gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX + offset, y: -height / 2, width: /*solidWidth + gradientInset + gradientRadius*/0.0, height: height)
 //        fadableContainerNode.layer.addSublayer(gradientFadeMask)
-//        gradientFadeMask.opacity = 0.3
+//        gradientFadeMask.opacity = 0.5
         fadableContainerNode.layer.mask = gradientFadeMask
     }
 //

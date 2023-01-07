@@ -3461,6 +3461,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             // TODO: mind text height here for maxY
         }
         
+//        let singleLineTitleHeight: CGFloat = singleLineTitleFrame.height // titleFrame.height
+//        let finalTitleScale = self.navigationTransition != nil
+//        ? transitionSourceTitleFrame.height / (singleLineTitleHeight)
+//        : titleMinScale
+
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
         // let offsetBehindRightButton: CGFloat = 44
@@ -3502,7 +3507,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             symmetricCollapsedMaxX = min(singleLineSize.width, titleConstrainedSize.width) /*titleFrame.width / 2 +*/ // min(singleLineSize.width, titleConstrainedSize.width + gradientRadius / 0.4)
 //            }
             let finalTitleWidth: CGFloat = navigationTransition != nil ?
-                (transitionSourceTitleFrame.width / titleMinScale)
+                min((transitionSourceTitleFrame.width / titleMinScale), singleLineSize.width)
             /*symmetricCollapsedMaxX*//*titleFrame.width*//*transitionSourceTitleFrame.width / titleScale*/ : symmetricCollapsedMaxX// min(test_realTitleWidth ?? verticalTransitionFinalWidth, titleConstrainedSize.width / titleScale)// min(singleLineSize.width / titleScale, availableWidth)
             
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
@@ -3536,6 +3541,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let rawTitleFrame: CGRect
         var offsetBehindRightButton: CGFloat { 44.0 }
+        let offsetForCredibilityIcon = self.credibilityIconSize.flatMap { $0 == .zero ? nil : $0.width + 4.0 } ?? 0
+           
         if !titleSize.width.isZero && !titleSize.height.isZero {
             if self.navigationTransition != nil {
                 //                self.titleNode.updateExpansion(progress: 1.0 - transitionFraction, transition: transition)
@@ -3544,10 +3551,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 
                 var neutralTitleScale: CGFloat = 1.0
-                var neutralSubtitleScale: CGFloat = 1.0
+                let neutralSubtitleScale: CGFloat = 1.0 + 0.2 * transitionFraction
                 if self.isAvatarExpanded {
                     neutralTitleScale = 0.7
-                    neutralSubtitleScale = 1 + 0.1 * transitionFraction
+//                    neutralSubtitleScale = 1 + 0.2 * transitionFraction
                 }
                 let singleLineBoundsNode = ImmediateTextNode()
                 singleLineBoundsNode.attributedText = titleString
@@ -3596,14 +3603,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 rawTitleFrame = CGRect(
                     origin: CGPoint(
-                        x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,
+                        x: titleCenter.x - titleFrame.size.width * neutralTitleScale / 2.0,/* - (min(
+                            titleFrame.size.width + ((trailingIconWidth + 4.0) * finalTitleScale * transitionFraction),
+                            titleFrame.size.width * (1 - transitionFraction) + transitionFraction * transitionSourceTitleFrame.width)) * neutralTitleScale / 2.0,*/
                         y: titleCenter.y - titleFrame.size.height * neutralTitleScale / 2.0),
                     size: CGSize(
                         width: (titleFrame.size.width + trailingIconWidth * transitionFraction) * neutralTitleScale,
                         height: titleFrame.size.height * neutralTitleScale
                     )
                 )
-                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                
+                let fadeGradientRadius: CGFloat
+                fadeGradientRadius = max(offsetForCredibilityIcon * transitionFraction, 30.0)
+                
+                let fadeOffsetForVisualSymmetry: CGFloat
+                let fadeInset: CGFloat
+                
+                if offsetForCredibilityIcon < .ulpOfOne {
+                    fadeOffsetForVisualSymmetry = fadeGradientRadius / 2// / 2.0
+                    fadeInset = 0.0
+                } else {
+                    fadeOffsetForVisualSymmetry = 0.0
+                    fadeInset = fadeGradientRadius / 2
+                }
+                let maxFinalTitleWidth = transitionSourceTitleFrame.width / finalTitleScale // + widthDiff / finalTitleScale
+                // TODO: mind offsetWithinTitleNode
+                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset/* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: maxFinalTitleWidth + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height, offset: 0)
+                //  self.titleNode.updateFading(solidWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
+                
+                //self.titleNode.updateFading(solidWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (0/*16*/ + xWidth / 2) : titleFrame.midX
@@ -3664,22 +3692,25 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitleOffset = titleCollapseFraction * -2.0
                 }
                 
-                
-                let offsetForCredibilityIcon = self.credibilityIconSize.flatMap { $0 == .zero ? nil : $0.width + 4.0 } ?? 0
+                let titleIsRTL = titleNode.textSubnodes.first?.value.currentLayout?.lines[0].isRTL == true
+                let offsetForCredibilityIcon = titleIsRTL ? 0.0 : self.credibilityIconSize.flatMap { $0 == .zero ? nil : $0.width + 4.0 } ?? 0
                 
                 let resultWidth = min(singleLineSize.width, titleConstrainedSize.width/* - offsetForCredibilityIcon*/)//  + 36 / 2)
                 
                 let fadeGradientRadius: CGFloat
-                fadeGradientRadius = max(offsetForCredibilityIcon * currentTitleCollapseFraction, 30.0)
+                fadeGradientRadius = max(offsetForCredibilityIcon * transitionFraction, 30.0)
                 
                 let fadeOffsetForVisualSymmetry: CGFloat
+                let fadeInset: CGFloat
+                
                 if offsetForCredibilityIcon < .ulpOfOne {
                     fadeOffsetForVisualSymmetry = fadeGradientRadius / 2// / 2.0
+                    fadeInset = 0.0
                 } else {
                     fadeOffsetForVisualSymmetry = 0.0
+                    fadeInset = fadeGradientRadius / 2
                 }
-                // TODO: mind offsetWithinTitleNode
-                self.titleNode.updateFading(solidWidth: titleConstrainedSize.width /* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: titleConstrainedSize.width + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height)
+                let maxFinalTitleWidth = titleConstrainedSize.width // + widthDiff / finalTitleScale
                 
                 // self.titleNode.updateFading(availableWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * (currentTitleCollapseFraction) / 2, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
                 
@@ -3691,8 +3722,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let offsetWithinTitleNode: CGFloat
                 
                 if titleIsMultiline && titleFrame.width < resultWidth {
-                    // TODO: replace
-                    let titleIsRTL = titleNode.textSubnodes.first?.value.currentLayout?.lines[0].isRTL == true
                     // Needs adjustment
                     if titleIsRTL {
                         offsetWithinTitleNode = (resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
@@ -3702,6 +3731,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     offsetWithinTitleNode = 0.0
                 }
+                
+                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset/* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height, offset: -abs(offsetWithinTitleNode))
                 
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 
