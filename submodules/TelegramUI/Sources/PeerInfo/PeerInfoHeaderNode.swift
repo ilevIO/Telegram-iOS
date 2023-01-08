@@ -4092,6 +4092,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
                     applyInvertedAvatarMask(to: backgroundTitleNode.layer)
                     applyInvertedAvatarMask(to: self.titleCredibilityIconViewCopy.layer)
+                    applyInvertedAvatarMask(to: self.titleCredibilityIconView.layer)
 //                    let frameInside = commonRoot.convert(commonRoot.convert(self.avatarListNode.listContainerNode.bounds, from: self.avatarListNode.listContainerNode.layer), to: backgroundTitleNode.layer)
                     // Invert
 //                    let darkTitleLayer = backgroundTitleNode.layer
