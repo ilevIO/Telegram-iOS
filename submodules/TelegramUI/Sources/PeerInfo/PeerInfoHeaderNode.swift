@@ -467,9 +467,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
-            if self.avatarNode.layer.cornerRadius != 0.0 {
-//                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
-            } else {
+            if !(self.avatarNode.layer.cornerRadius != 0.0) {
                 self.avatarNode.layer.cornerRadius = avatarCornerRadius
             }
             self.avatarNode.layer.masksToBounds = true
@@ -2068,12 +2066,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
 
 let TitleNodeStateRegular = PeerHeaderTitleState.thin
 let TitleNodeStateExpanded = PeerHeaderTitleState.thic
-let TitleNodeStateNavTransitionSupport = PeerHeaderTitleState.thicInverted
-
-//private let TitleNodeStateRegular = 0
-//private let TitleNodeStateExpanded = 1
-//// Since UIFont.systemFont weight variation is not continuous fading TitleNodeStateRegular half way navigation transition reveling this actual "replica" of navigationTitleView
-//private let TitleNodeStateNavTransitionSupport = 2
+let TitleNodeStateExpandedInverted = PeerHeaderTitleState.thicInverted
 
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
@@ -2101,7 +2094,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let avatarOverlayNode: PeerInfoEditingAvatarOverlayNode
     let titleNodeContainer: ASDisplayNode
     let titleNodeRawContainer: ASDisplayNode
-    let titleNode: ExpandablePeerTitleContainerNode // MultiScaleTextNodeExpandable
+    let titleNode: ExpandablePeerTitleContainerNode
     let titleCredibilityIconView: ComponentHostView<Empty>
     let titleCredibilityIconViewCopy: ComponentHostView<Empty>
     var credibilityIconSize: CGSize?
@@ -2192,7 +2185,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.subtitleNodeContainer = ASDisplayNode()
         self.subtitleNodeRawContainer = ASDisplayNode()
-        self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateNavTransitionSupport, TitleNodeStateExpanded])
+        self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpandedInverted, TitleNodeStateExpanded])
         self.subtitleNode.displaysAsynchronously = false
 
         self.panelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
@@ -2842,7 +2835,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: subtitleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: subtitleConstrainedSize),
-            TitleNodeStateNavTransitionSupport: MultiScaleTextState(attributes: invertedSubtitleAttributes, constrainedSize: subtitleConstrainedSize)
+            TitleNodeStateExpandedInverted: MultiScaleTextState(attributes: invertedSubtitleAttributes, constrainedSize: subtitleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleStringText
         
@@ -3080,7 +3073,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.subtitleNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0,
-            TitleNodeStateNavTransitionSupport: self.isAvatarExpanded ? 1.0 : 0.0
+            TitleNodeStateExpandedInverted: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
 
         self.panelSubtitleNode.update(stateFractions: [
@@ -3704,7 +3697,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     applyInvertedAvatarMask(to: mainTitleNode.layer)
                 }
                 
-                if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
+                if let backgroundTitleNode = self.titleNode.stateNode(forKey: TitleNodeStateExpandedInverted) {
                     applyInvertedAvatarMask(to: backgroundTitleNode.layer)
                     applyInvertedAvatarMask(to: self.titleCredibilityIconViewCopy.layer)
                     applyInvertedAvatarMask(to: self.titleCredibilityIconView.layer)
@@ -3713,7 +3706,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let subtitleNode = self.subtitleNode.stateNode(forKey: TitleNodeStateExpanded) {
                 applyAvatarMask(to: subtitleNode.layer)
                 
-                if let backgroundSubtitleNode = self.subtitleNode.stateNode(forKey: TitleNodeStateNavTransitionSupport) {
+                if let backgroundSubtitleNode = self.subtitleNode.stateNode(forKey: TitleNodeStateExpandedInverted) {
                     applyInvertedAvatarMask(to: backgroundSubtitleNode.layer)
                 }
             }

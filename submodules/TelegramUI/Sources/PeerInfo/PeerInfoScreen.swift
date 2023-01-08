@@ -9353,9 +9353,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {
                     return nil
                 }
-                /*if isInteractive && strongSelf.controllerNode.headerNode.isAvatarExpanded {
-                    return nil
-                }*/
+                
                 if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
                     return nil
                 }
@@ -9901,13 +9899,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             } else {
                 previousTitleView = bottomNavigationBar.titleView
             }
-            // MARK: - Title transition here
-            if let previousTitleView = previousTitleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false)/*, Int.random(in: 5...10) == 2*/ {
+            
+            if let previousTitleView = previousTitleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false) {
                 previousTitleNode.view.frame = previousTitleView.titleContainerView.frame
                 previousTitleView.titleContainerView.addPortal(view: previousTitleNode)
                 let previousTitleContainerNode = ASDisplayNode()
                 previousTitleContainerNode.view.addSubview(previousTitleNode.view)
-//                previousTitleNode.view.backgroundColor = UIColor.red.withAlphaComponent(0.4)
                 
                 previousTitleNode.view.frame = previousTitleNode.view.frame.offsetBy(dx: -previousTitleNode.view.frame.width / 2.0, dy: -previousTitleNode.view.frame.height / 2.0)
                 self.previousTitleNode = (previousTitleContainerNode, previousTitleNode)
@@ -10009,7 +10006,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 transition.updateFrame(view: iconView, frame: iconView.bounds.offsetBy(dx: (1.0 - fraction) * 8.0, dy: 0.0))
             }
             
-            // TODO: Adjust ChatController header title here
             if let (layout, _) = self.screenNode.validLayout {
                 let sectionInset: CGFloat
                 if layout.size.width >= 375.0 {
@@ -10024,18 +10020,17 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             let titleScale: CGFloat = (fraction * previousTitleNode.view.bounds.height + (1.0 - fraction) * self.headerNode.titleNodeRawContainer.bounds.height) / previousTitleNode.view.bounds.height
             let subtitleScale = max(0.01, min(10.0, (fraction * previousStatusNode.bounds.height + (1.0 - fraction) * self.headerNode.subtitleNodeRawContainer.bounds.height) / previousStatusNode.bounds.height))
-            // MARK: BEDA HERE
+            
             transition.updateFrame(node: previousTitleContainerNode, frame: CGRect(origin: self.headerNode.titleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(view: previousTitleNode.view, frame: CGRect(origin: CGPoint(x: -previousTitleFrame.width / 2.0, y: -previousTitleFrame.height / 2.0), size: previousTitleFrame.size))
             transition.updateFrame(node: previousStatusContainerNode, frame: CGRect(origin: self.headerNode.subtitleNodeRawContainer.frame.center, size: CGSize()))
             transition.updateFrame(node: previousStatusNode, frame: CGRect(origin: CGPoint(x: -previousStatusFrame.size.width / 2.0, y: -previousStatusFrame.size.height / 2.0), size: previousStatusFrame.size))
-//            self.headerNode.subtitleNodeRawContainer.backgroundColor = UIColor.red.withAlphaComponent(0.4)
+            
             previousStatusNode.backgroundColor = UIColor.yellow.withAlphaComponent(0.4)
             transition.updateSublayerTransformScale(node: previousTitleContainerNode, scale: titleScale)
             transition.updateSublayerTransformScale(node: previousStatusContainerNode, scale: subtitleScale)
             
-//            self.headerNode.titleNode.updateExpansion(progress: 1.0 - fraction, transition: transition)
-            // Cross-fading only last fractions of transition since SFUI does not support continuous weight variable (needed for transition from .regular to .semibold
+            // Cross-fading only last fractions of transition since SFUI-font does not support continuous weight variable (needed for transition from .regular to .semibold
             let fractionThreshold: CGFloat
             if case .immediate = transition {
                 fractionThreshold = 0.97
@@ -10075,11 +10070,6 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 
                 self.headerNode.subtitleNode.alpha = 1.0 - fraction
                 previousStatusNode.alpha = fraction
-//                transition.updateAlpha(node: self.headerNode.titleNode, alpha: 1.0 - fraction)
-//                transition.updateAlpha(layer: previousTitleNode.view.layer, alpha: fraction)
-//
-//                transition.updateAlpha(node: self.headerNode.subtitleNode, alpha: 1.0 - fraction)
-//                transition.updateAlpha(node: previousStatusNode, alpha: fraction)
             }
             
             transition.updateAlpha(node: self.headerNode.navigationButtonContainer, alpha: (1.0 - fraction))
