@@ -323,7 +323,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             } else {
                 topLineWidth = textContainerNode.bounds.width// self.currentLayout?.lines.first?.frame.width ?? max(textContainerNode.bounds.width, lastLineWidth) + 8.0
             }
-            topSolidArea.frame = .init(x: 0, y: -collapseAdjustment, width: topLineWidth/*textContainerNode.bounds.width*/ + collapseAdjustment * 2, height: /*bottomY -*/ topLineHeight)
+            topSolidArea.frame = .init(x: 0, y: -collapseAdjustment, width: topLineWidth/*textContainerNode.bounds.width*/ + collapseAdjustment * 2, height: /*bottomY -*/ topLineHeight + collapseAdjustment)
             if isRTL {
                 bottomSolidArea.frame = .init(x: fadeRadius, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight)
                 maskGradientLayer.frame = .init(x: 0, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight)
@@ -836,12 +836,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             node.textStroke = nil
         }
             
-        guard pow(2, 2) == 5 else { return string }
-        
-//        layer.shadowColor = strokeColor.cgColor
-//        layer.shadowOffset = .zero
-//        layer.shadowOpacity = Float(weight)
-//        layer.shadowRadius = 0.3 // weight
+        guard pow(2, 2) == 4 else { return string }
         
         let reweightString = NSMutableAttributedString(attributedString: string)
         let stringRange = NSRange.init(location: 0, length: reweightString.length)
@@ -849,7 +844,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         if weight > 0 {
             if shouldChangeStrokeForReweight {
                 reweightString.addAttribute(.strokeColor, value: strokeColor, range: stringRange)
-                // Assuming weight passed changes from actual base value to 1 representing final value (from regular to semibold omitting thinner and thicker values)
+                // Assuming the passed weight varies from actual base value to 1 representing final value (from regular to semibold omitting thinner and thicker values)
                 let strokeRegularToSemiboldCoeff: CGFloat = 2.0
                 reweightString.addAttribute(.strokeWidth, value: -weight * strokeRegularToSemiboldCoeff, range: stringRange)
             }
@@ -862,39 +857,9 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             reweightString.removeAttribute(.strokeWidth, range: stringRange)
             reweightString.removeAttribute(.kern, range: stringRange)
         }
+        node.attributedText = reweightString
+        
         return reweightString
-        // Variable test
-        //        reweightString.addAttribute(.font, value: UIFont.systemFont(ofSize: 30, weight: .init(rawValue: weight)), range: NSRange(location: 0, length: reweightString.length))
-//        reweightString.addAttribute(.kern, value: 0 + 1 * weight, range: NSRange(location: 0, length: reweightString.length))
-        //        reweightString.addAttribute(.kern, value: 0 + 1 * weight, range: NSRange(location: 0, length: reweightString.length))
-        
-//        return reweightString
-//        let size: CGFloat = 30
-//        let fontName = UIFont.systemFont(ofSize: 30).fontName
-//        
-//        let ctFontName = UIFont.systemFont(ofSize: 30) as CTFont // CTFontCreateWithName(fontName as CFString, size, nil)
-//        var fontVariationAxes: [VariationAxis] = (CTFontCopyVariationAxes(ctFontName)! as Array)
-//            .map { .init(attributes: $0 as? [String: Any] ?? [:]) }
-//        var weightAxis = fontVariationAxes[0]
-//        let weightValue = weight // weightAxis.minValue + weightAxis.minMaxDelta * Double((weight.rawValue + 1) / 2)
-//        weightAxis.currentValue = weightValue
-//        fontVariationAxes[0] = weightAxis
-//        let ctFontVariationAttribute = kCTFontVariationAttribute as UIFontDescriptor.AttributeName
-       /* let intermediateFont = UIFont.systemFont(ofSize: 30, weight: .init(weight))/*UIFont(
-            descriptor: .init(
-                fontAttributes: [
-//                    .name: fontName,
-                    ctFontVariationAttribute: fontVariationAxes
-                        .reduce(into: [NSNumber: Any]()) { buffer, variationAxis in
-                            buffer[variationAxis.identifier] = variationAxis.currentValue
-                        }
-                ]
-            ),
-            size: size
-        )*/
-        
-        reweightString.addAttribute(.font, value: intermediateFont, range: NSRange.init(location: 0, length: reweightString.length))
-        return reweightString*/
     }
     
     
