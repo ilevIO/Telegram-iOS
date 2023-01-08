@@ -3540,8 +3540,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var offsetBehindRightButton: CGFloat { 44.0 }
         let offsetForCredibilityIcon = self.credibilityIconSize.flatMap { $0 == .zero ? nil : $0.width + 4.0 } ?? 0
            
+        func quadraticFractionTransform(expansionFraction: CGFloat) -> CGFloat {
+            max(sqrt(1 - (1 - expansionFraction) * (1 - expansionFraction)), expansionFraction)
+        }
+        
         if !titleSize.width.isZero && !titleSize.height.isZero {
             if self.navigationTransition != nil {
+                let subtitleFraction = transitionFraction
                 //                self.titleNode.updateExpansion(progress: 1.0 - transitionFraction, transition: transition)
                 self.titleNode.textSubnodes.forEach {
                     $0.value.updateExpansion(fraction: 1.0 - transitionFraction, transition: transition)
@@ -3596,7 +3601,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     x: transitionFraction * (transitionSourceTitleFrame.midX - widthDiff - trailingIconWidth / 2) + (1.0 - transitionFraction) * titleFrame.midX,
                     y: transitionFraction * (transitionSourceTitleFrame.midY - heightDiff) + (1.0 - transitionFraction) * (titleFrame.midY))
                 
-                let subtitleCenter = CGPoint(x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX, y: transitionFraction * transitionSourceSubtitleFrame.midY + (1.0 - transitionFraction) * subtitleFrame.midY)
+                let subtitleCenter = CGPoint(
+                    x: transitionFraction * transitionSourceSubtitleFrame.midX + (1.0 - transitionFraction) * subtitleFrame.midX,
+                    y: subtitleFraction * transitionSourceSubtitleFrame.midY + (1.0 - subtitleFraction) * subtitleFrame.midY)
                 
                 rawTitleFrame = CGRect(
                     origin: CGPoint(
@@ -3611,19 +3618,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 )
                 
                 let fadeGradientRadius: CGFloat
-                fadeGradientRadius = max(offsetForCredibilityIcon * transitionFraction, 30.0)
+                fadeGradientRadius = max(offsetForCredibilityIcon, 30.0) * transitionFraction
                 
                 let fadeOffsetForVisualSymmetry: CGFloat
                 let fadeInset: CGFloat
                 
                 if offsetForCredibilityIcon < .ulpOfOne {
                     fadeOffsetForVisualSymmetry = fadeGradientRadius / 2// / 2.0
-                    fadeInset = 0.0
+                    fadeInset = fadeGradientRadius / 2// 0.0
                 } else {
                     fadeOffsetForVisualSymmetry = 0.0
                     fadeInset = fadeGradientRadius / 2
                 }
-                let maxFinalTitleWidth = transitionSourceTitleFrame.width / finalTitleScale // + widthDiff / finalTitleScale
+                let maxFinalTitleWidth = (transitionSourceTitleFrame.width / finalTitleScale) * transitionFraction + titleConstrainedSize.width * (1 - transitionFraction) // + widthDiff / finalTitleScale
                 // TODO: mind offsetWithinTitleNode
                 self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset/* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: maxFinalTitleWidth + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height, offset: 0)
                 //  self.titleNode.updateFading(solidWidth: titleConstrainedSize.width / titleScale - offsetBehindRightButton * transitionFraction, containerWidth: titleConstrainedSize.width / titleScale, height: titleFrame.height)
@@ -3651,7 +3658,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 //                print(rawTitleFrame)
                 self.titleNodeRawContainer.frame = navBarTitleTransitionFrame// navBarTitleTransitionFrame
                 transition.updateFrameAdditiveToCenter(node: self.titleNodeContainer, frame: CGRect(origin: rawTitleFrame.center, size: CGSize()))
-                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                
+                let offsetWithinTitleNode: CGFloat
+                
+                let titleIsMultiline = (self.titleNode.lastMainLayout?.lines.count ?? 0) > 1
+                let resultWidth = min(singleLineSize.width, titleConstrainedSize.width)/*titleConstrainedSize.width*/
+                let titleIsRTL = self.titleNode.lastMainLayout?.lines.first?.isRTL == true
+                if titleIsMultiline && titleFrame.width < resultWidth {
+                    // Needs adjustment
+                    if titleIsRTL {
+                        offsetWithinTitleNode = (resultWidth - titleFrame.width) / 2 * transitionFraction
+                    } else {
+                        offsetWithinTitleNode = 0.0 // -(resultWidth - titleFrame.width) / 2 * transitionFraction
+                    }
+                } else {
+                    offsetWithinTitleNode = 0.0
+                }
+                
+                transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: offsetWithinTitleNode, y: 0), size: CGSize()))
                 
                 let rawSubtitleFrame = CGRect(origin: CGPoint(x: subtitleCenter.x - subtitleFrame.size.width / 2.0, y: subtitleCenter.y - subtitleFrame.size.height / 2.0), size: subtitleFrame.size)
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
@@ -3674,6 +3698,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.titleNode.textSubnodes.forEach {
                     $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, transition: transition)
                 }
+                
+                let subtitleTransitionFraction = currentTitleCollapseFraction// (self.titleNode.lastMainLayout?.lines.count ?? 0) > 1 ? (1 - quadraticFractionTransform(expansionFraction: 1 - currentTitleCollapseFraction))
+                    // : currentTitleCollapseFraction
                 
                 //                let singleLineTitleHeight: CGFloat = 35
                 
@@ -3701,11 +3728,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let fadeInset: CGFloat
                 
                 if offsetForCredibilityIcon < .ulpOfOne {
-                    fadeOffsetForVisualSymmetry = fadeGradientRadius * 0.5// / 2.0
-                    fadeInset = fadeGradientRadius * 0
+                    fadeOffsetForVisualSymmetry = 0.0 // fadeGradientRadius * 0.5// / 2.0
+                    if !titleIsRTL {
+                        fadeInset = fadeGradientRadius * 0.5 // fadeGradientRadius * 0
+                    } else {
+                        fadeInset = 0.0
+                    }
                 } else {
                     fadeOffsetForVisualSymmetry = 0.0
-                    fadeInset = fadeGradientRadius * 0.5// 0.8
+                    fadeInset = fadeGradientRadius * 0.5 // 0.8
                 }
                 let maxFinalTitleWidth = titleConstrainedSize.width // + widthDiff / finalTitleScale
                 
@@ -3721,7 +3752,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 if titleIsMultiline && titleFrame.width < resultWidth {
                     // Needs adjustment
                     if titleIsRTL {
-                        offsetWithinTitleNode = -(resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
+                        offsetWithinTitleNode = (resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
                     } else {
                         offsetWithinTitleNode = -(resultWidth - titleFrame.width) / 2 * currentTitleCollapseFraction
                     }
@@ -3729,7 +3760,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     offsetWithinTitleNode = 0.0
                 }
                 
-                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset/* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height, offset: -offsetWithinTitleNode)
+                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset/* / titleScale*//* + fadeOffsetForVisualSymmetry*/, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry/* / titleScale*/, height: titleFrame.height, offset: abs(offsetWithinTitleNode))
                 
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 
@@ -3747,7 +3778,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let subtitleFrameForCollapsedTitle = CGRect(x: subtitleFrame.minY, y: singleLineTitleFrame.maxY + 1.0, width: subtitleFrame.width, height: subtitleFrame.height)
                 let subtitleBetweenCollapsedAndExpandedCoeff: CGFloat = 1// 0.5
                 
-                let subtitleForCollapsedTitleFraction = currentTitleCollapseFraction * subtitleBetweenCollapsedAndExpandedCoeff
+                let subtitleForCollapsedTitleFraction = subtitleTransitionFraction * subtitleBetweenCollapsedAndExpandedCoeff
                 let rawSubtitleFrame = CGRect(
                     x: subtitleFrame.minX/*subtitleFrameForCollapsedTitle.minX * subtitleForCollapsedTitleFraction + subtitleFrame.minX * (1.0 - subtitleForCollapsedTitleFraction)*/,
                     y: subtitleFrameForCollapsedTitle.minY * subtitleForCollapsedTitleFraction + subtitleFrame.minY * (1.0 - subtitleForCollapsedTitleFraction),
