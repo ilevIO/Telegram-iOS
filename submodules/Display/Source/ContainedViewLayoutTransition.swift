@@ -905,10 +905,6 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateCornerRadius(node: ASDisplayNode, cornerRadius: CGFloat, maskedCorners: CACornerMask, transitionedSize: CGSize, completion: ((Bool) -> Void)? = nil) {
-        return updateCornerRadius(node: node, cornerRadius: cornerRadius, completion: completion)
-    }
-    
     func updateContentsRect(layer: CALayer, contentsRect: CGRect, completion: ((Bool) -> Void)? = nil) {
         if layer.contentsRect == contentsRect {
             if let completion = completion {
