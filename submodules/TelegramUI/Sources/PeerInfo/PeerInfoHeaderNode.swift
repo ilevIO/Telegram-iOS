@@ -3394,7 +3394,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.titleNode.textSubnodes.forEach {
                     $0.value.updateExpansion(fraction: 1.0 - transitionFraction, transition: transition)
                 }
-                
+                // Depending on title font weight: + ~10% for remaining regular all the way
                 var neutralTitleScale: CGFloat = 1.0
                 let neutralSubtitleScale: CGFloat = 1.0 + 0.2 * transitionFraction
                 if self.isAvatarExpanded {
@@ -3465,9 +3465,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     fadeOffsetForVisualSymmetry = 0.0
                     fadeInset = fadeGradientRadius / 2
                 }
-                let maxFinalTitleWidth = (transitionSourceTitleFrame.width / finalTitleScale) * transitionFraction + titleConstrainedSize.width * (1 - transitionFraction)
+//                let maxFinalTitleWidth = (transitionSourceTitleFrame.width / finalTitleScale) * transitionFraction + titleConstrainedSize.width * (1 - transitionFraction)
                 
-                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset, containerWidth: maxFinalTitleWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0)
+                let fadeWidth: CGFloat = titleConstrainedSize.width / titleScale - 44.0 * transitionFraction
+                
+                self.titleNode.updateFading(solidWidth: /*maxFinalTitleWidth - fadeInset*/fadeWidth - fadeInset, containerWidth: fadeWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (0 + xWidth / 2) : titleFrame.midX
@@ -3493,16 +3495,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let offsetWithinTitleNode: CGFloat
                 
                 let titleIsMultiline = (self.titleNode.lastMainLayout?.lines.count ?? 0) > 1
-                let resultWidth = min(singleLineSize.width, titleConstrainedSize.width)/*titleConstrainedSize.width*/
+                let resultWidth = min(singleLineSize.width, titleConstrainedSize.width) 
                 let titleIsRTL = self.titleNode.lastMainLayout?.lines.first?.isRTL == true
                 if titleIsMultiline && titleFrame.width < resultWidth {
                     if titleIsRTL {
-                        offsetWithinTitleNode = (resultWidth - titleFrame.width) / 2 * transitionFraction
+                        offsetWithinTitleNode = (resultWidth - titleFrame.width) * transitionFraction
                     } else {
                         offsetWithinTitleNode = 0.0 // -(resultWidth - titleFrame.width) / 2 * transitionFraction
                     }
                 } else {
-                    offsetWithinTitleNode = 0.0
+                    if !titleIsMultiline && titleFrame.width <= resultWidth {
+                        offsetWithinTitleNode = -offsetForCredibilityIcon / 2 * transitionFraction
+                    } else {
+                        offsetWithinTitleNode = 0.0
+                    }
                 }
                 
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: offsetWithinTitleNode, y: 0), size: CGSize()))

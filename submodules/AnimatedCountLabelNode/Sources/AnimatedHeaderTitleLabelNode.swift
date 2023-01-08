@@ -96,7 +96,6 @@ public class AnimatedHeaderTitleLabelNode: ASDisplayNode {
         let reverseAnimationDirection = self.reverseAnimationDirection
         let alwaysOneDirection = self.alwaysOneDirection
         return { [weak self] size, initialSegments in
-            print("[ChatTitle] header \(size) ")
             var segments: [ResolvedSegment] = []
             loop: for segment in initialSegments {
                 switch segment {
