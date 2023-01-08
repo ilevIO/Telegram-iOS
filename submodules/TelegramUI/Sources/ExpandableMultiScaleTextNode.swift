@@ -146,7 +146,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         } else {
             gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-            var adjustmentCoof: CGFloat { 1.5 }
+            var adjustmentCoof: CGFloat { 1.0 }
             gradientLayer.frame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius * adjustmentCoof, height: height)
         }
       //  gradientLayer.backgroundColor = UIColor.black.withAlphaComponent(0.4).cgColor
@@ -448,7 +448,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     rangeExpandedFrames[absoluteRange] = expandedFrame
                     glyphRunIndex += absoluteRange.length
                 }
-                print(glyphRunIndex)
+//                print(glyphRunIndex)
 //                let actualSize = lineTextNode.updateLayout(line.frame.size)
                /* let attrString = line.attributedString
                 
@@ -507,6 +507,18 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             
             let needsFading = self.needsContainerFading(layout: expandedLayout)
             
+            if expandedLayout.isTruncated && !needsFading, expandedLayout.lines.count == 2  {
+                lastLineBackupNode.attributedText = expandedLayout.lines[1].attributedString
+                lastLineBackupNode.displaysAsynchronously = false
+                lastLineBackupNode.maximumNumberOfLines = 1
+                lastLineBackupNode.layer.masksToBounds = false
+                _ = lastLineBackupNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
+                if lastLineBackupNode.supernode == nil {
+                    textContainerNode.addSubnode(lastLineBackupNode)
+                }
+                lastLineBackupNode.alpha = 0
+            }
+            
             for (index, (range, textFrame)) in expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).enumerated() {
                 var substring = string.attributedSubstring(from: range)
                 let textNode = ImmediateTextNode()
@@ -560,14 +572,18 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             return currentExpandedTotalSize
         } else {
             // TODO: iterate layout runs
-            let lines: [LayoutLine] = getLayoutLines(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
-            var width: CGFloat = 0
-            var height: CGFloat = 0
-            for line in lines {
-                width = max(width, min(line.frame.width, expandedLayout.constrainedSize.width))
-                height += line.frame.height
+//            let lines: [LayoutLine] = getLayoutLines(string, textSize: expandedLayout.constrainedSize, maxNumberOfLines: self.maxNumberOfLines)
+//            var width: CGFloat = 0
+//            var height: CGFloat = 0
+//            for line in lines {
+//                width = max(width, min(line.frame.width, expandedLayout.constrainedSize.width))
+//                height += line.frame.height
+//            }
+            let totalSize: CGSize = expandedLayout.lines.reduce(CGSize.zero) {
+                return CGSize(
+                    width: max($0.width, min($1.frame.width, expandedLayout.constrainedSize.width)),
+                    height: $0.height + $1.frame.height)
             }
-            let totalSize = CGSize(width: width, height: height)
             self.currentExpandedTotalSize = totalSize
             return totalSize// CGSize(width: width, height: height)// totalSize
         }
@@ -579,16 +595,30 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     
     var singleLineInfo: LayoutLine?
     
+    let lastLineBackupNode = ImmediateTextNode()
+    
     func updateExpansion(fraction expansionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         guard let expandedLayout = currentLayout else { return }
         // TODO: store
-        guard // let string = self.currentString,
-            let adjustedString = self.currentString.flatMap({ reweightString(string: $0, weight: 1 - expansionFraction, in: ImmediateTextNode()) }),
-              let singleLineInfo = /*self.singleLineInfo ?? */ getLayoutLines(adjustedString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
-        else { return }
+//        let adjustedString: NSAttributedString
+        let singleLineInfo: LayoutLine
+        
+        if shouldReweightString && shouldChangeKernForReweight {
+            guard // let string = self.currentString,
+                let _adjustedString = self.currentString.flatMap({ reweightString(string: $0, weight: 1 - expansionFraction, in: ImmediateTextNode()) }),
+                let _singleLineInfo = /*self.singleLineInfo ?? */ getLayoutLines(_adjustedString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
+            else { return }
+//            adjustedString = _adjustedString
+            singleLineInfo = _singleLineInfo
+        } else {
+            guard let currentString = self.currentString,
+                  let _singleLineInfo = self.singleLineInfo ?? getLayoutLines(currentString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).first
+            else { return }
+//            adjustedString = currentString
+            singleLineInfo = _singleLineInfo
+        }
         
         self.singleLineInfo = singleLineInfo
-        
         let sortedFrames = expandedLayout.rangeToFrame.sorted(by: { $0.key.location < $1.key.location }).map { $0 }
         
 //        var width: CGFloat = 0
@@ -597,24 +627,24 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            width = max(width, line.value.width)
 //            height += line.value.height
 //        }
-        let totalSize: CGSize
-        if let currentSize = self.currentExpandedTotalSize {
-            totalSize = currentSize
-        } else {
-            let sizeTextnode = ImmediateTextNode()
-            sizeTextnode.displaysAsynchronously = false
-            sizeTextnode.attributedText = self.currentString
-            sizeTextnode.maximumNumberOfLines = self.maxNumberOfLines
-            totalSize = sizeTextnode.updateLayout(expandedLayout.constrainedSize)
-        }
+//        let totalSize: CGSize
+//        if let currentSize = self.currentExpandedTotalSize {
+//            totalSize = currentSize
+//        } else {
+//            let sizeTextnode = ImmediateTextNode()
+//            sizeTextnode.displaysAsynchronously = false
+//            sizeTextnode.attributedText = self.currentString
+//            sizeTextnode.maximumNumberOfLines = self.maxNumberOfLines
+//            totalSize = sizeTextnode.updateLayout(expandedLayout.constrainedSize)
+//        }
 //            let totalSize = CGSize(width: width, height: height)
-        print(totalSize)
+//        print(totalSize)
         // for (index, textFragmentsNode) in self.textFragmentsNodes.enumerated() {
         var rtlAdjustment: CGFloat = 0.0
         let firstLineIsRTL = singleLineInfo.isRTL
         
         if firstLineIsRTL {
-            let currentContainerWidth = expandedLayout.constrainedSize.width// textContainerNode.bounds.width
+            let currentContainerWidth = textContainerNode.bounds.width// expandedLayout.constrainedSize.width// textContainerNode.bounds.width
             rtlAdjustment = max(singleLineInfo.frame.width - currentContainerWidth, 0.0) / 2.0
         }
         
@@ -648,12 +678,12 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //                   singleLineInfo.glyphRuns.contains(where: { CTRunGetStatus($0).contains(.rightToLeft) }) {
                     offsetX = secondaryOffset - expandedFrame.width// -= actualSize.width
                 }*/
-                // TODO: cache
+                
                 if let glyphRangeIndex = singleLineInfo.glyphRunsRanges.firstIndex(where: { $0.contains(range.location) }), CTRunGetStatus(singleLineInfo.glyphRuns[glyphRangeIndex]).contains(.rightToLeft) {
 //                    var pointBuffer = CGPoint.zero//[CGPoint]()
                     let glyphRun = singleLineInfo.glyphRuns[glyphRangeIndex]
                     let runRange = CTRunGetStringRange(glyphRun)
-                    // TODO: research if always matches
+                    
                     let positions = UnsafeMutablePointer<CGPoint>.allocate(capacity: runRange.length)
                     
                     CTRunGetPositions(glyphRun, CFRangeMake(/*range.location*/0, range.length), positions)
@@ -707,10 +737,10 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            textFragmentsNode.layer.masksToBounds = false
 //            textFragmentsNode.attributedText = newString
 //            textFragmentsNode.backgroundColor = .red.withAlphaComponent(0.4)
-            textFragmentsNode.attributedText = NSAttributedString(attributedString: textFragmentsNode.attributedText!)
+//            textFragmentsNode.attributedText = NSAttributedString(attributedString: textFragmentsNode.attributedText!)
             _ = textFragmentsNode.updateLayout(expandedLayout.constrainedSize)
-            textFragmentsNode.redrawIfPossible()
-            textFragmentsNode.recursivelyEnsureDisplaySynchronously(true)
+//            textFragmentsNode.redrawIfPossible()
+//            textFragmentsNode.recursivelyEnsureDisplaySynchronously(true)
             
             transition.updateFrame(node: textFragmentsNode, frame: CGRect(origin: currentProgressFrame.origin, size: CGSize(width: currentProgressFrame.width, height: expandedFrame.height)))// currentProgressFrame)
             // TODO: decide on whether to stick to node.updateLayout() size or CTLine size
@@ -718,6 +748,10 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
 //            textFragmentsNode.attributedText = prevString
 //            textFragmentsNode.backgroundColor = UIColor.red.withAlphaComponent(0.2)
 //            _ = textFragmentsNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)/*currentProgressFrame.size*/)// CGSize(width: totalSize.width, height: totalSize.height))//.init(width: currentProgressFrame.width, height: currentProgressFrame.height)) // Because assigning bigger frame leads to extra specing
+        }
+        if expandedLayout.lines.count == maxNumberOfLines && lastLineBackupNode.attributedText.length > 0 {
+            let secondLine = expandedLayout.lines[maxNumberOfLines - 1]
+            let range = secondL
         }
         prevExpansion = expansionFraction
     }
