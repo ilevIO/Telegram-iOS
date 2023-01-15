@@ -25,6 +25,7 @@ public class ImmediateTextNode: TextNode {
     public var textStroke: (UIColor, CGFloat)?
     public var cutout: TextNodeCutout?
     public var displaySpoilers = false
+    public var extraGlyphSpacing: CGFloat?
     
     public var truncationMode: NSLineBreakMode {
         get {
@@ -97,7 +98,7 @@ public class ImmediateTextNode: TextNode {
         self.constrainedSize = constrainedSize
         
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke, displaySpoilers: self.displaySpoilers))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, textShadowColor: self.textShadowColor, textStroke: self.textStroke, displaySpoilers: self.displaySpoilers/*, extraGlyphSpacing: self.extraGlyphSpacing*/))
         let _ = apply()
         if layout.numberOfLines > 1 {
             self.trailingLineWidth = layout.trailingLineWidth
@@ -111,7 +112,7 @@ public class ImmediateTextNode: TextNode {
         self.constrainedSize = constrainedSize
         
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, displaySpoilers: self.displaySpoilers))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, displaySpoilers: self.displaySpoilers/*, extraGlyphSpacing: self.extraGlyphSpacing*/))
         let _ = apply()
         return ImmediateTextNodeLayoutInfo(size: layout.size, truncated: layout.truncated, numberOfLines: layout.numberOfLines)
     }
@@ -120,7 +121,7 @@ public class ImmediateTextNode: TextNode {
         self.constrainedSize = constrainedSize
         
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, displaySpoilers: self.displaySpoilers))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, verticalAlignment: self.verticalAlignment, lineSpacing: self.lineSpacing, cutout: self.cutout, insets: self.insets, displaySpoilers: self.displaySpoilers/*, extraGlyphSpacing: self.extraGlyphSpacing*/))
         let _ = apply()
         return layout
     }

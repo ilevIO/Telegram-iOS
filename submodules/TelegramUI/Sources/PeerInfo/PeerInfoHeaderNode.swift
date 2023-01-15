@@ -2826,7 +2826,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             constrainedSize: titleConstrainedSize,
             textExpansionFraction: 1.0,
             isAvatarExpanded: isAvatarExpanded,
-            needsExpansionLayoutUpdate: navigationTransition == nil, // || isFirstTime
+            needsExpansionLayoutUpdate: false, // navigationTransition == nil, // || isFirstTime
             transition: transition
         )
         
@@ -3364,9 +3364,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 ? min((transitionSourceTitleFrame.width / titleMinScale), singleLineSize.width)
                 : symmetricCollapsedMaxX
             
+//            let lastLineEndingX: CGFloat
+//            if self.titleNode.lastMainLayout?.lines.count == 2, let lastLinewidt {
+//                lastLineEndingX = self.titleNode.lastMainLayout?.lines[1].w
+//            } else {
+            let lastLineEndingX = centeredTitleSize * (1 - collapseFraction) + finalTitleWidth * collapseFraction
+//            }
+            
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
-                    x: centeredTitleSize * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
+                    x: lastLineEndingX + 4.0,
                     y: (titleSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - credibilityIconSize.height) / 2.0 + 2.0),
                 size: credibilityIconSize)
                 .offsetBy(dx: thinNodeFrame.minX, dy: thinNodeFrame.minY))
@@ -3392,7 +3399,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.navigationTransition != nil {
                 let subtitleFraction = transitionFraction
                 self.titleNode.textSubnodes.forEach {
-                    $0.value.updateExpansion(fraction: 1.0 - transitionFraction, transition: transition)
+                    $0.value.updateExpansion(fraction: 1.0 - transitionFraction, changeStringWeight: true, transition: transition)
                 }
                 // Depending on title font weight: + ~10% for remaining regular all the way
                 var neutralTitleScale: CGFloat = 1.0
@@ -3469,7 +3476,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 let fadeWidth: CGFloat = titleConstrainedSize.width / titleScale - 44.0 * transitionFraction
                 
-                self.titleNode.updateFading(solidWidth: /*maxFinalTitleWidth - fadeInset*/fadeWidth - fadeInset, containerWidth: fadeWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0)
+                self.titleNode.updateFading(solidWidth: /*maxFinalTitleWidth - fadeInset*/fadeWidth - fadeInset, containerWidth: fadeWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0, transition: transition)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (0 + xWidth / 2) : titleFrame.midX
@@ -3527,7 +3534,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let transitionDeadZone: CGFloat = 0.5
                 let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
                 self.titleNode.textSubnodes.forEach {
-                    $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, transition: transition)
+                    $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, changeStringWeight: false, transition: transition)
                 }
                 
                 let subtitleTransitionFraction = currentTitleCollapseFraction
@@ -3584,7 +3591,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     offsetWithinTitleNode = 0.0
                 }
                 
-                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: abs(offsetWithinTitleNode))
+                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: abs(offsetWithinTitleNode), transition: transition)
                 
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 
