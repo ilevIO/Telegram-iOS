@@ -2619,7 +2619,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
-
+            
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
             effectiveSeparatorAlpha = transitionFraction
             
@@ -2629,7 +2629,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             let contentOffset = max(0.0, contentOffset - 140.0)
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / 30.0))
-
+            
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
             effectiveSeparatorAlpha = backgroundTransitionFraction
         }
@@ -2650,11 +2650,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: width, height: UIScreenPixel))
         self.navigationBackgroundBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-
+        
         let navigationSeparatorAlpha: CGFloat = state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0
         transition.updateAlpha(node: self.navigationBackgroundBackgroundNode, alpha: 1.0 - navigationSeparatorAlpha)
         transition.updateAlpha(node: self.navigationSeparatorNode, alpha: navigationSeparatorAlpha)
-
+        
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let expandedAvatarControlsHeight: CGFloat = 61.0
@@ -2706,7 +2706,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     title = " "
                 }
             }
-
+            
             titleStringText = title
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
@@ -2739,7 +2739,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 
                 subtitleIsButton = true
-
+                
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
@@ -2767,7 +2767,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 invertedSubtitleAttributes = MultiScaleTextState.Attributes(font: smallSubtitleAttributes.font, color: subtitleAttributes.color)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
-
+                
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
@@ -2808,12 +2808,30 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         // Accounting for difference in font weight
         let expandedExtraWidth: CGFloat = 0 // isAvatarExpanded ? 8 : 0
-        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0) + expandedExtraWidth, height: .greatestFiniteMagnitude)
-        let subtitleConstrainedSize = CGSize(width: titleConstrainedSize.width - 8.0, height: CGFloat.greatestFiniteMagnitude)
         
         let titleString = NSAttributedString(string: titleStringText, font: titleAttributes.font, textColor: titleAttributes.color)
         let smallTitleString = NSAttributedString(string: titleStringText, font: smallTitleAttributes.font, textColor: smallTitleAttributes.color)
         let backgroundTitleString = NSAttributedString(string: titleStringText, font: invertedTitleAttributes.font, textColor: invertedTitleAttributes.color)
+        
+        let singleLineDummy = ImmediateTextNode()
+        singleLineDummy.attributedText = isAvatarExpanded ? smallTitleString : titleString
+        let singleLineSize = singleLineDummy.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
+        
+        let titleConstrainedSize: CGSize
+        
+        let totalConstrainedWidth = width - textSideInset * 2.0 + expandedExtraWidth
+        let credibilityIconPadding: CGFloat = 20.0
+        let credibilityIconWidthReduction: CGFloat = (isPremium || isVerified || isFake ? credibilityIconPadding : 0.0)
+        
+        let (constrainedLines, _) = getLayoutLines(titleString, textSize: .init(width: totalConstrainedWidth - credibilityIconWidthReduction, height: CGFloat.greatestFiniteMagnitude))
+        
+        if singleLineSize.width < totalConstrainedWidth || constrainedLines.count > 1 && constrainedLines.last?.isRTL == true {
+            titleConstrainedSize = CGSize(width: totalConstrainedWidth - credibilityIconWidthReduction, height: .greatestFiniteMagnitude)
+        } else {
+            titleConstrainedSize = CGSize(width: totalConstrainedWidth, height: .greatestFiniteMagnitude)
+        }
+         
+        let subtitleConstrainedSize = CGSize(width: titleConstrainedSize.width - 8.0, height: CGFloat.greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.update(
             states: [
@@ -2827,6 +2845,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             textExpansionFraction: 1.0,
             isAvatarExpanded: isAvatarExpanded,
             needsExpansionLayoutUpdate: false, // navigationTransition == nil, // || isFirstTime
+            iconPadding: credibilityIconWidthReduction,
             transition: transition
         )
         
@@ -2969,10 +2988,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let usernameFrame: CGRect
         let usernameSpacing: CGFloat = 4.0
         
-        let singleLineDummy = ImmediateTextNode()
-        singleLineDummy.attributedText = isAvatarExpanded ? smallTitleString : titleString
-        let singleLineSize = singleLineDummy.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
-        
         let singleLineTitleFrame: CGRect
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
@@ -2994,6 +3009,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0), size: subtitleSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
+//            let inlineCredibilityAdjustment: CGFloat
+//            if constrainedLines.count > 1, let lastLine = constrainedLines.last, lastLine.isRTL == true && lastLine.frame.width < titleConstrainedSize.width {
+//                inlineCredibilityAdjustment = totalConstrainedWidth - titleConstrainedSize.width
+//            } else {
+//                inlineCredibilityAdjustment = 0.0
+//            }
+//
             titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             
             let constrainedTitleWidth = titleConstrainedSize.width
@@ -3340,9 +3362,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
         
+        var scrollCollapseDeadzone: CGFloat { 0.5 }
         var titleHorizontalOffset: CGFloat = 0.0
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
             titleHorizontalOffset = -(credibilityIconSize.width + 4.0) / 2.0
+            
+            if constrainedLines.count > 1, let lastLine = constrainedLines.last/*, lastLine.isRTL*/, !lastLine.isRTL || lastLine.frame.width < titleConstrainedSize.width {
+                titleHorizontalOffset = 0.0
+            }
             
             let centeredTitleSize = titleSize.width
             let thinNodeFrame = self.titleNode.stateNode(forKey: PeerHeaderTitleState.thin)?.frame ?? .zero
@@ -3353,8 +3380,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if navigationTransition != nil {
                 collapseFraction = transitionFraction
             } else {
-                let transitionDeadZone: CGFloat = 0.3
-                let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
+                let currentTitleCollapseFraction = titleCollapseFraction > scrollCollapseDeadzone ? (titleCollapseFraction - scrollCollapseDeadzone) / (1 - scrollCollapseDeadzone) : 0
                 collapseFraction = currentTitleCollapseFraction
             }
             
@@ -3364,30 +3390,73 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 ? min((transitionSourceTitleFrame.width / titleMinScale), singleLineSize.width)
                 : symmetricCollapsedMaxX
             
+            let collapsedIconOriginX = finalTitleWidth
+            
 //            let lastLineEndingX: CGFloat
 //            if self.titleNode.lastMainLayout?.lines.count == 2, let lastLinewidt {
 //                lastLineEndingX = self.titleNode.lastMainLayout?.lines[1].w
 //            } else {
-            let lastLineEndingX = centeredTitleSize * (1 - collapseFraction) + finalTitleWidth * collapseFraction
-//            }
+            let alignmentIsCentered: Bool = !self.isAvatarExpanded
+            
+            func credibilityOrigin(titleWidth: CGFloat, /*credibilityIconSize: CGSize,*/ titleLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout?) -> CGFloat {
+                if let titleLayout = titleLayout {
+                    if titleLayout.lines.count > 1, let lastLine = titleLayout.lines.last {
+                        let credibilityIconSize: CGFloat = 20.0 // 32
+                        
+                        let lastLineWidth = min(lastLine.frame.width, totalConstrainedWidth - credibilityIconSize)
+                        if alignmentIsCentered {
+                            if lastLine.isRTL {
+                                return (titleWidth - (titleWidth - lastLineWidth) / 2) * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+//                                return max(0, (titleWidth - lastLineWidth) / 2 - credibilityIconSize)
+                            } else {
+                                let tempLastLineRight = max(titleWidth / 2 - lastLine.frame.width / 2, 0) + lastLineWidth// min(titleWidth - (titleWidth - lastLineWidth) / 2, lastLineWidth)
+                                return (tempLastLineRight) * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+                            }
+                        } else {
+                            if lastLine.isRTL {
+                                return titleWidth * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+//                                return (titleWidth - lastLineWidth) * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+                            } else {
+                                return lastLineWidth * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+                            }
+                        }
+                    } else {
+                        return titleWidth * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+                    }
+                } else {
+                    return titleWidth * (1 - collapseFraction) + collapsedIconOriginX * collapseFraction
+                }
+            }
+            
+            let lastLineEndingX: CGFloat = credibilityOrigin(titleWidth: centeredTitleSize, titleLayout: self.titleNode.lastMainLayout)
+            let expandedLastLineEndingX: CGFloat = credibilityOrigin(titleWidth: titleExpandedSize.width, titleLayout: self.titleNode.lastMainLayout)
+            let expandedInvertedLastLineEndingX = expandedLastLineEndingX // credibilityOrigin(titleWidth: centeredTitleSize, titleLayout: self.titleNode.lastMainLayout)
+            
+            let normarRegularCenterY = titleSize.height - singleLineTitleFrame.height / 2.0
+            let regularLastLineOriginY: CGFloat = normarRegularCenterY * (1 - collapseFraction) + singleLineTitleFrame.height / 2.0 * collapseFraction - (credibilityIconSize.height) / 2.0
+            
+            // Given same font used with expanded and regular
+            let expandedSingleLineFrame = singleLineTitleFrame
+            let expandedLastLineCenterY = titleExpandedSize.height - expandedSingleLineFrame.height / 2.0
+            let expandedLastLineOriginY: CGFloat = expandedLastLineCenterY * (1 - collapseFraction) + expandedSingleLineFrame.height / 2.0 * collapseFraction - (titleExpandedCredibilityIconSize.height) / 2.0
             
             transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
                     x: lastLineEndingX + 4.0,
-                    y: (titleSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - credibilityIconSize.height) / 2.0 + 2.0),
+                    y: regularLastLineOriginY + 2.0),
                 size: credibilityIconSize)
                 .offsetBy(dx: thinNodeFrame.minX, dy: thinNodeFrame.minY))
             
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(
                 origin: CGPoint(
-                    x: titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
-                    y: (titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0 + 1.0),
+                    x: /*titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction*/expandedLastLineEndingX + 4.0,
+                    y: expandedLastLineOriginY + 1.0),// (titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0 + 1.0),
                 size: titleExpandedCredibilityIconSize).offsetBy(dx: thicNodeFrame.minX, dy: thicNodeFrame.minY))
             
             transition.updateFrame(view: self.titleCredibilityIconViewCopy, frame: CGRect(
                 origin: CGPoint(
-                    x: titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
-                    y: floor((titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0),
+                    x: expandedInvertedLastLineEndingX + 4.0,// titleExpandedSize.width * (1 - collapseFraction) + finalTitleWidth * collapseFraction + 4.0,
+                    y: expandedLastLineOriginY + 1.0),// floor((titleExpandedSize.height * (1 - collapseFraction) + singleLineTitleFrame.height * collapseFraction - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0),
                 size: titleExpandedCredibilityIconSize).offsetBy(dx: thicInvertedNodeFrame.minX, dy: thicInvertedNodeFrame.minY))
         }
         
@@ -3399,7 +3468,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.navigationTransition != nil {
                 let subtitleFraction = transitionFraction
                 self.titleNode.textSubnodes.forEach {
-                    $0.value.updateExpansion(fraction: 1.0 - transitionFraction, changeStringWeight: true, transition: transition)
+                    $0.value.updateExpansion(fraction: 1.0 - transitionFraction, changeStringWeight: true, extraIconPadding: credibilityIconPadding, transition: transition)
                 }
                 // Depending on title font weight: + ~10% for remaining regular all the way
                 var neutralTitleScale: CGFloat = 1.0
@@ -3476,7 +3545,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 let fadeWidth: CGFloat = titleConstrainedSize.width / titleScale - 44.0 * transitionFraction
                 
-                self.titleNode.updateFading(solidWidth: /*maxFinalTitleWidth - fadeInset*/fadeWidth - fadeInset, containerWidth: fadeWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0, transition: transition)
+                self.titleNode.updateFading(solidWidth: /*maxFinalTitleWidth - fadeInset*/fadeWidth - fadeInset, containerWidth: fadeWidth + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: 0, extraIconPadding: credibilityIconPadding, transition: transition)
                 
                 let xWidth = min(singleSize.width, transitionSourceTitleFrame.width / finalTitleScale)
                 let singleMidX = isAvatarExpanded ? (0 + xWidth / 2) : titleFrame.midX
@@ -3531,10 +3600,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
             } else {
-                let transitionDeadZone: CGFloat = 0.5
+                let transitionDeadZone: CGFloat = scrollCollapseDeadzone
                 let currentTitleCollapseFraction = titleCollapseFraction > transitionDeadZone ? (titleCollapseFraction - transitionDeadZone) / (1 - transitionDeadZone) : 0
                 self.titleNode.textSubnodes.forEach {
-                    $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, changeStringWeight: false, transition: transition)
+                    $0.value.updateExpansion(fraction: 1.0 - currentTitleCollapseFraction, changeStringWeight: false, extraIconPadding: credibilityIconPadding, transition: transition)
                 }
                 
                 let subtitleTransitionFraction = currentTitleCollapseFraction
@@ -3591,7 +3660,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     offsetWithinTitleNode = 0.0
                 }
                 
-                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: abs(offsetWithinTitleNode), transition: transition)
+                self.titleNode.updateFading(solidWidth: maxFinalTitleWidth - fadeInset, containerWidth: maxFinalTitleWidth + fadeInset + fadeOffsetForVisualSymmetry, height: titleFrame.height, offset: abs(offsetWithinTitleNode), extraIconPadding: credibilityIconPadding, transition: transition)
                 
                 let titleOffsetForCenteredSingleLine: CGFloat = (titleFrame.height - singleLineTitleFrame.height) / 3
                 
