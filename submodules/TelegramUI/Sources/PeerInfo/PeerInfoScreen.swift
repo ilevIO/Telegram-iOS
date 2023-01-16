@@ -9340,8 +9340,13 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 }
                 return false
             }*/
+
+            
             self.navigationBar?.makeCustomTransitionNode = { [weak self] other, isInteractive in
                 guard let strongSelf = self else {
+                    return nil
+                }
+                if isInteractive && PeerInfoHeaderNode.needsSimpleExpandedAvatarTransition && strongSelf.controllerNode.headerNode.isAvatarExpanded {
                     return nil
                 }
                 if strongSelf.navigationItem.leftBarButtonItem != nil {
@@ -10032,12 +10037,15 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             // Cross-fading only last fractions of transition since SFUI-font does not support continuous weight variable (needed for transition from .regular to .semibold
             let fractionThreshold: CGFloat
-            if case .immediate = transition {
-                fractionThreshold = 0.97
+            if PeerInfoHeaderNode.needsSimpleExpandedAvatarTransition && self.headerNode.isAvatarExpanded {
+                fractionThreshold = 0.0
             } else {
-                fractionThreshold = 0.9999
+                if case .immediate = transition {
+                    fractionThreshold = 0.97
+                } else {
+                    fractionThreshold = 0.9999
+                }
             }
-            
             var usingSameSubtitleTransition: Bool { true }
             var subtitleSwitchThreshold: CGFloat { 0.5 }
             
