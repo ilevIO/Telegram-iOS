@@ -869,7 +869,7 @@ public extension ContainedViewLayoutTransition {
                 completion(true)
             }
         case let .animated(duration, curve):
-            let previousCornerRadius = node.layer.cornerRadius
+            let previousCornerRadius = node.cornerRadius
             node.cornerRadius = cornerRadius
             node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {

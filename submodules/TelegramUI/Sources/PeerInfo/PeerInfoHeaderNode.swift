@@ -2815,12 +2815,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let smallTitleString = NSAttributedString(string: titleStringText, font: smallTitleAttributes.font, textColor: smallTitleAttributes.color)
         let backgroundTitleString = NSAttributedString(string: titleStringText, font: invertedTitleAttributes.font, textColor: invertedTitleAttributes.color)
         
-//        let singleLineDummy = ImmediateTextNode()
         let singleLineSize: CGSize
         
         if self.navigationTransition == nil || self.navigationTransition?.fraction == 0 {
             singleLineSize = getLayoutLines(isAvatarExpanded ? smallTitleString : titleString, textSize: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).0.first?.frame.size ?? CGSize.zero
-//            singleLineDummy.attributedText = isAvatarExpanded ? smallTitleString : titleString
         } else {
             let reweightString = NSMutableAttributedString(attributedString: isAvatarExpanded ? smallTitleString : titleString)
             reweightString.addAttribute(.font, value: UIFont.systemFont(ofSize: 30, weight: .semibold), range: NSRange(location: 0, length: reweightString.length))
