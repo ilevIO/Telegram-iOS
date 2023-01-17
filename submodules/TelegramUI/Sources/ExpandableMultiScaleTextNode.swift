@@ -415,14 +415,14 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         
         let newWeight = 1 - expansionFraction
         for (index, (range, frame)) in sortedFrames.enumerated() {
-            let textFragmentsNode = self.textFragmentsNodes[index]
+            let textFragmentNode = self.textFragmentsNodes[index]
             let currentProgressFrame: CGRect
             let expandedFrame = frame
             if changeStringWeight && shouldReweightString {
-                let _ = reweightString(string: textFragmentsNode.attributedText!, weight: newWeight, in: textFragmentsNode)
+                let _ = reweightString(string: textFragmentNode.attributedText ?? NSAttributedString(string: ""), weight: newWeight, in: textFragmentNode)
             } else {
-                textFragmentsNode.textStroke = nil
-                textFragmentsNode.extraGlyphSpacing = nil
+                textFragmentNode.textStroke = nil
+                textFragmentNode.extraGlyphSpacing = nil
             }
             
             if expansionFraction == 1 {
@@ -462,8 +462,8 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     height: expandedFrame.height * expansionFraction - collapsedFrame.height * (expansionFraction - 1)
                 )
             }
-            _ = textFragmentsNode.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
-            transition.updateFrame(node: textFragmentsNode, frame: CGRect(origin: currentProgressFrame.origin, size: CGSize(width: currentProgressFrame.width, height: expandedFrame.height)))
+            _ = textFragmentNode.updateLayout(.init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
+            transition.updateFrame(node: textFragmentNode, frame: CGRect(origin: currentProgressFrame.origin, size: CGSize(width: currentProgressFrame.width, height: expandedFrame.height)))
         }
         
         prevExpansion = expansionFraction
