@@ -81,6 +81,8 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     var maskGradientLayer = CAGradientLayer()
     var topSolidArea = CALayer()
     var bottomSolidArea = CALayer()
+    var blockExpansionUpdate: Bool = false
+    var transitionAnimation: CABasicAnimation?
     
     func updateContainerFading(extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
         // TODO: cache and reuse "class FadingMaskLayer: CALayer"
@@ -274,8 +276,6 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             return ExpandableTextNodeLayout(rangeToFrame: rangeExpandedFrames, constrainedSize: constrainedSize, alignment: forcedAlignment ?? .left, isTruncated: isTruncated/*textNodeLayout.truncated*/, lines: lines)
         }
     }
-    var blockExpansionUpdate: Bool = false
-    var transitionAnimation: CABasicAnimation?
     
     func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, forceRemake: Bool = false, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var shouldRemake = forceRemake
@@ -498,18 +498,22 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         let nodeLastWeight = node?.textStroke?.1
         
         if let lastWeight = nodeLastWeight {
-            if /*abs(lastWeight - weight) < 0.15 && (abs(1.0 - weight) > .ulpOfOne || weight > .ulpOfOne) ||*/ abs(lastWeight - weight) < .ulpOfOne {
+            let underOptimalThreshold = !shouldChangeSpacingForReweight && abs(lastWeight - weight) < 0.15 && (abs(1.0 - weight) > .ulpOfOne || weight > .ulpOfOne)
+            if underOptimalThreshold || abs(lastWeight - weight) < .ulpOfOne {
                 return string
             }
         }
         
         if weight > CGFloat.ulpOfOne {
             let strokeRegularToSemiboldCoeff: CGFloat = 0.8
-            node?.textStroke = (strokeColor, weight * strokeRegularToSemiboldCoeff)
+            let width = weight * strokeRegularToSemiboldCoeff
+            node?.textStroke = (strokeColor, width)
+            node?.cachedLayout?.updateTextStroke((strokeColor, width))
 //            node.textShadowColor = UIColor.red
             
         } else {
             node?.textStroke = nil
+            node?.cachedLayout?.updateTextStroke(nil)
 //            node.textShadowColor = nil
         }
             
@@ -547,7 +551,9 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
         
         // Requesting update
-        _ = node?.updateLayout(.zero)
+//        _ = node?.updateLayout(.zero)
+        node?.contents = nil
+        node?.setNeedsDisplay()
         
         return reweightString
     }

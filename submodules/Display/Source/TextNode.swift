@@ -260,7 +260,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let blockQuotes: [TextNodeBlockQuote]
     fileprivate let lineColor: UIColor?
     fileprivate let textShadowColor: UIColor?
-    fileprivate let textStroke: (UIColor, CGFloat)?
+    fileprivate /*let*/var textStroke: (UIColor, CGFloat)?
     fileprivate let displaySpoilers: Bool
     public let hasRTL: Bool
     public let spoilers: [(NSRange, CGRect)]
@@ -833,6 +833,10 @@ public final class TextNodeLayout: NSObject {
             return (rects.map { $1 }, startEdge, endEdge)
         }
         return nil
+    }
+    /// Temporary
+    public func updateTextStroke(_ textStroke: (UIColor, CGFloat)?) {
+        self.textStroke = textStroke
     }
 }
 
@@ -1537,7 +1541,7 @@ open class TextNode: ASDisplayNode {
                             for i in 0..<glyphCount {
                                 context.textPosition = CGPoint(x: lineFrame.minX + extraGlyphSpacing * CGFloat(i), y: lineFrame.minY)
                                 CTRunDraw(run, context, CFRangeMake(i, 1))
-                                //                            CTFontDrawGlyphs(font, &glyphs, &_positions, glyphCount, context)
+                                // CTFontDrawGlyphs(font, &glyphs, &_positions, glyphCount, context)
                             }
                         } else {
                             CTRunDraw(run, context, CFRangeMake(0, glyphCount))
