@@ -19,7 +19,7 @@ struct ExpandablePeerTitleTextNodeState {
     let alpha: CGFloat
 }
 
-var globalShouldChangeSpacingForReweight = false
+var debugShouldChangeSpacingForReweight = false
 
 final class ExpandablePeerTitleTextNode: ASDisplayNode {
     struct ExpandableTextNodeLayout {
@@ -27,7 +27,6 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         let constrainedSize: CGSize
         let alignment: NSTextAlignment
         let isTruncated: Bool
-        // Quick convenience, replace with more minimal
         let lines: [LayoutLine]
     }
     private(set) var currentString: NSAttributedString?
@@ -37,25 +36,33 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
     private var ctLine: CTLine?
     private var prevAlignment: NSTextAlignment?
     
+    var maxNumberOfLines: Int { 2 }
     var textContainer: ASDisplayNode {
         maskedContainerNode
     }
     private let maskedContainerNode = ASDisplayNode()
-    let textContainerNode = ASDisplayNode()
+    private let textContainerNode = ASDisplayNode()
     private(set) var textFragmentsNodes: [ImmediateTextNode] = []
     
-    var maxNumberOfLines: Int { 2 }
     
     private var maskLayerContainer: CALayer?
     
     private(set) var currentExpandedTotalSize: CGSize?
     private(set) var singleLineInfo: LayoutLine?
-    /// Performance hit
+    private var singleInfoReweight: LayoutLine?
+    
     private var shouldReweightString: Bool { true }
-    private var shouldChangeSpacingForReweight: Bool { globalShouldChangeSpacingForReweight /*true*/ }
+    private var shouldChangeSpacingForReweight: Bool { debugShouldChangeSpacingForReweight /*true*/ }
     private var shouldChangeStrokeForReweight: Bool { true }
     
     private var prevExpansion: CGFloat?
+    
+    private var maskLayer = CALayer()
+    private var maskGradientLayer = CAGradientLayer()
+    private var topSolidArea = CALayer()
+    private var bottomSolidArea = CALayer()
+    private var blockExpansionUpdate: Bool = false
+    private var transitionAnimation: CABasicAnimation?
     
     override init() {
         super.init()
@@ -64,12 +71,9 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         self.maskedContainerNode.addSubnode(textContainerNode)
     }
     
-    func updateTextFrame(_ frame: CGRect, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
+    fileprivate func updateTextFrame(_ frame: CGRect, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: maskedContainerNode, frame: frame)
         transition.updateFrame(node: textContainerNode, frame: maskedContainerNode.bounds)
-//        maskedContainerNode.frame = frame
-//        textContainerNode.frame = maskedContainerNode.bounds
-        
         updateContainerFading(extraIconPadding: extraIconPadding, transition: transition)
     }
     
@@ -77,26 +81,16 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         return true
     }
     
-    var maskLayer = CALayer()
-    var maskGradientLayer = CAGradientLayer()
-    var topSolidArea = CALayer()
-    var bottomSolidArea = CALayer()
-    var blockExpansionUpdate: Bool = false
-    var transitionAnimation: CABasicAnimation?
-    
-    func updateContainerFading(extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
-        // TODO: cache and reuse "class FadingMaskLayer: CALayer"
+    fileprivate func updateContainerFading(extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
         if let currentLayout = self.currentLayout, needsContainerFading(layout: currentLayout), let lastLine = currentLayout.lines.last, currentLayout.isTruncated || lastLine.frame.width > currentLayout.constrainedSize.width - extraIconPadding {
 //            maskLayerContainer?.removeFromSuperlayer()
-//            let maskLayer = CALayer()
-            
-//            let maskGradientLayer = CAGradientLayer()
             maskGradientLayer.colors = [UIColor.cyan.cgColor, UIColor.clear.cgColor]
             
             let lastLineWidth: CGFloat
             let bottomY: CGFloat
-            
             let isRTL = lastLine.isRTL
+            // Long mixed adjustment
+            let singleLineIsRTL = isRTL // currentLayout.lines[0].isRTL
             
             if isRTL {
                 maskGradientLayer.startPoint = .init(x: 1, y: 0.5)
@@ -107,8 +101,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
             
             var lastFrame: CGRect?
-            if isRTL {
-                // lastFrame = textFragmentsNodes.last?.frame
+            if isRTL && singleLineIsRTL {
                 if let lastNode = textFragmentsNodes.last {
                     let expansion = self.prevExpansion ?? 1.0
                     lastFrame = CGRect(
@@ -124,8 +117,8 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
             
             if let lastTextLayerFrame = lastFrame {
-                if isRTL {
-                    lastLineWidth = textContainerNode.bounds.width - lastTextLayerFrame.minX// textContainerNode.bounds.width
+                if isRTL && singleLineIsRTL {
+                    lastLineWidth = textContainerNode.bounds.width - lastTextLayerFrame.minX
                 } else {
                     let borrowedWidth = max(lastTextLayerFrame.width + extraIconPadding - currentLayout.constrainedSize.width, 0.0)
                     lastLineWidth = lastTextLayerFrame.maxX - borrowedWidth
@@ -135,42 +128,51 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 lastLineWidth = textContainerNode.bounds.width
                 bottomY = textContainerNode.bounds.height
             }
-//            let topSolidArea = CALayer()
             topSolidArea.backgroundColor = UIColor.blue.cgColor
             
-//            let bottomSolidArea = CALayer()
             bottomSolidArea.backgroundColor = UIColor.blue.cgColor
             
             let bottomLineHeight: CGFloat = lastLine.frame.height
             let fadeRadius: CGFloat = 50
             transition.updateFrame(layer: maskLayer, frame: textContainerNode.bounds)
-//            maskLayer.frame = textContainerNode.bounds
+            
             // Adjusting for cases when top line becomes wider (currently due to kern increase used to fake weight transition)
             let collapseAdjustment: CGFloat = shouldChangeSpacingForReweight ? 32 : 0
             let topLineHeight = bottomLineHeight
             let topLineWidth: CGFloat
-            if isRTL {
+            if isRTL && singleLineIsRTL {
                 let safeWhitespacePadding: CGFloat = 16.0
-                topLineWidth = max(textContainerNode.bounds.width, lastLineWidth) + safeWhitespacePadding // + 16.0 // 16 was due to miscalculation of line width, TODO: remove 16.0
+                topLineWidth = max(textContainerNode.bounds.width, lastLineWidth) + safeWhitespacePadding
             } else {
                 topLineWidth = textContainerNode.bounds.width
             }
             
             transition.updateFrame(layer: topSolidArea, frame: CGRect(x: 0, y: -collapseAdjustment, width: topLineWidth + collapseAdjustment * 2, height: topLineHeight + collapseAdjustment))
-//            topSolidArea.frame = .init(x: 0, y: -collapseAdjustment, width: topLineWidth + collapseAdjustment * 2, height: topLineHeight + collapseAdjustment)
+            
             if isRTL {
-                if transition.isAnimated {
-                    transition.updateFrame(layer: bottomSolidArea, frame: CGRect(x: textContainer.bounds.width - lastLineWidth + fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight))
-                    transition.updateFrame(layer: maskGradientLayer, frame: CGRect(x: bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight))
+                if singleLineIsRTL {
+                    if transition.isAnimated {
+                        transition.updateFrame(layer: bottomSolidArea, frame: CGRect(x: textContainer.bounds.width - lastLineWidth + fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight))
+                        transition.updateFrame(layer: maskGradientLayer, frame: CGRect(x: bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight))
+                    } else {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        bottomSolidArea.frame = CGRect(x: textContainer.bounds.width - lastLineWidth + fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight)
+                        maskGradientLayer.frame = CGRect(x: /*0 + extraIconPadding*/bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight)
+                        CATransaction.commit()
+                    }
                 } else {
-                    CATransaction.begin()
-                    CATransaction.setDisableActions(true)
-                    bottomSolidArea.frame = CGRect(x: textContainer.bounds.width - lastLineWidth + fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight)
-                    maskGradientLayer.frame = CGRect(x: /*0 + extraIconPadding*/bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight)
-                    CATransaction.commit()
+                    if transition.isAnimated {
+                        transition.updateFrame(layer: bottomSolidArea, frame: CGRect(x: fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight))
+                        transition.updateFrame(layer: maskGradientLayer, frame: CGRect(x: bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight))
+                    } else {
+                        CATransaction.begin()
+                        CATransaction.setDisableActions(true)
+                        bottomSolidArea.frame = CGRect(x: fadeRadius + extraIconPadding, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight)
+                        maskGradientLayer.frame = CGRect(x: /*0 + extraIconPadding*/bottomSolidArea.frame.minX - fadeRadius, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight)
+                        CATransaction.commit()
+                    }
                 }
-//                bottomSolidArea.frame = .init(x: fadeRadius, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight)
-//                maskGradientLayer.frame = .init(x: 0, y: bottomY - bottomLineHeight, width: fadeRadius, height: bottomLineHeight)
             } else {
                 if transition.isAnimated {
                     transition.updateFrame(layer: bottomSolidArea, frame: CGRect(x: 0, y: bottomY - bottomLineHeight, width: lastLineWidth - fadeRadius + collapseAdjustment, height: bottomLineHeight))
@@ -185,7 +187,6 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
             
             transition.updateBackgroundColor(layer: maskGradientLayer, color: UIColor.blue.withAlphaComponent(1 - (self.prevExpansion ?? 0))/*.cgColor*/)
-//            maskGradientLayer.backgroundColor = UIColor.black.withAlphaComponent(1 - (self.prevExpansion ?? 0)).cgColor
             
             if topSolidArea.superlayer == nil {
                 maskLayer.addSublayer(topSolidArea)
@@ -203,7 +204,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
     }
     
-    func getExpandedLayout(string: NSAttributedString, forcedAlignment: NSTextAlignment?, constrainedSize: CGSize, iconPadding: CGFloat) -> ExpandableTextNodeLayout {
+    fileprivate func getExpandedLayout(string: NSAttributedString, forcedAlignment: NSTextAlignment?, constrainedSize: CGSize, iconPadding: CGFloat) -> ExpandableTextNodeLayout {
         var shouldRecalculate = false
         
         if currentString != string || constrainedSize != currentConstrainedSize {
@@ -235,7 +236,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 var glyphOffset: CGFloat = 0
                 let lineString = line.attributedString
                 let lineFrame: CGRect = self.expandedFrame(
-                    lineSize: CGSize(width: actualSize.width, height: actualSize.height), // actualSize.size,
+                    lineSize: actualSize,
                     offsetY: offsetY,
                     containerBounds: containerBounds,
                     alignment: forcedAlignment ?? (lineString.length > 0 ? (lineString.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.alignment : .left),
@@ -258,12 +259,11 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     let glyphWidth = CTRunGetTypographicBounds(glyphRun, CFRangeMake(0, 0), nil, nil, nil)
                     if line.isRTL && lineIndex > 0 && !prevLineIsRTL {
                         xOffset = line.frame.width - glyphOffset - glyphWidth
-                    } else if line.isRTL {
-                        xOffset = glyphOffset
                     } else {
                         xOffset = glyphOffset
                     }
-                     glyphOffset += glyphWidth
+                    
+                    glyphOffset += glyphWidth
                     
                     let expandedFrame = CGRect(x: xOffset + lineFrame.origin.x, y: offsetY, width: glyphWidth, height: actualSize.height)
                     rangeExpandedFrames[absoluteRange] = expandedFrame
@@ -277,7 +277,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         }
     }
     
-    func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, forceRemake: Bool = false, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    fileprivate func updateIfNeeded(string: NSAttributedString, expandedLayout: ExpandableTextNodeLayout, expansionFraction: CGFloat, needsExpansionLayoutUpdate: Bool, forceRemake: Bool = false, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var shouldRemake = forceRemake
         
         if currentString != string || expandedLayout.rangeToFrame != currentLayout?.rangeToFrame {
@@ -298,20 +298,18 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             }
         } else {
             blockExpansionUpdate = false
-            // Only this specific (yet apparentely common) case, for more general would need to keep track of each symbol
+            // Only this specific (yet apparentely common) case. For more general would need to keep track of each symbol
             if transition.isAnimated, let prevLayout, prevLayout.lines.count > 1 && expandedLayout.lines.count == 1 {
                 self.updateExpansion(fraction: 0, changeStringWeight: false, usingLayout: prevLayout, usingContainerWidth: self.currentExpandedTotalSize?.width, extraIconPadding: extraIconPadding, transition: transition)
                 blockExpansionUpdate = true
-//                self.transitionAnimation = transition.animation()
                 
-//                self.transitionAnimation?.completion = { [weak self] _ in
                 let animationDuration = transition.animation()?.duration ?? .zero
                 let remakeThreshold: Double = 0.6
+                
                 DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration * remakeThreshold) { [weak self] in
                     self?.transitionAnimation = nil
                     self?.blockExpansionUpdate = false
                     // Forcing remake
-//                    self?.currentLayout = nil
                     _ = self?.updateIfNeeded(
                         string: string,
                         expandedLayout: expandedLayout,
@@ -331,11 +329,10 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     let textNode = ImmediateTextNode()
                     textNode.displaysAsynchronously = false
                     textNode.attributedText = substring
-                    textNode.textAlignment = .left
+                    textNode.textAlignment = .natural
                     textNode.maximumNumberOfLines = 1
                     textNode.layer.masksToBounds = false
                     _ = textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
-//                    textNode.frame = frame
                     textFragmentsNodes.append(textNode)
                     textContainerNode.addSubnode(textNode)
                 }
@@ -353,7 +350,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                     let textNode = ImmediateTextNode()
                     textNode.displaysAsynchronously = false
                     textNode.attributedText = substring
-                    textNode.textAlignment = .left
+                    textNode.textAlignment = .natural
                     textNode.maximumNumberOfLines = 1
                     textNode.layer.masksToBounds = false
                     _ = textNode.updateLayout(CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
@@ -385,14 +382,11 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             return totalSize
         }
     }
-    var singleInfoReweight: LayoutLine?
     
     func updateExpansion(fraction expansionFraction: CGFloat, changeStringWeight: Bool, usingLayout layout: ExpandableTextNodeLayout? = nil, usingContainerWidth containerWidth: CGFloat? = nil, extraIconPadding: CGFloat, transition: ContainedViewLayoutTransition) {
         guard !self.blockExpansionUpdate else { return }
         guard let expandedLayout = layout ?? self.currentLayout else { return }
         let singleLineInfo: LayoutLine
-        
-//        self.textContainerNode.backgroundColor = UIColor.red.withAlphaComponent(0.3)
         
         if changeStringWeight && self.shouldReweightString && self.shouldChangeSpacingForReweight {
             guard
@@ -418,27 +412,19 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             let currentContainerWidth = containerWidth ?? textContainerNode.bounds.width
             rtlAdjustment = max(singleLineInfo.frame.width - currentContainerWidth, 0.0)
         }
-//        let isNavigationTransition = changeStringWeight
-//        if isNavigationTransition {
-//            rtlAdjustment = 0.0
-//        }
+        
         let newWeight = 1 - expansionFraction
         for (index, (range, frame)) in sortedFrames.enumerated() {
             let textFragmentsNode = self.textFragmentsNodes[index]
-//            textFragmentsNode.backgroundColor = UIColor.orange.withAlphaComponent(0.2)
             let currentProgressFrame: CGRect
             let expandedFrame = frame
             if changeStringWeight && shouldReweightString {
                 let _ = reweightString(string: textFragmentsNode.attributedText!, weight: newWeight, in: textFragmentsNode)
-//                textFragmentsNode.attributedText = string
             } else {
-                // Restore
                 textFragmentsNode.textStroke = nil
-                // And spacing...
                 textFragmentsNode.extraGlyphSpacing = nil
             }
-//            textFragmentsNode.layer.borderColor = UIColor.white.cgColor
-//            textFragmentsNode.layer.borderWidth = 2
+            
             if expansionFraction == 1 {
                 currentProgressFrame = expandedFrame
             } else {
@@ -450,19 +436,15 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
                 offsetX = secondaryOffset
                 let actualSize = expandedFrame.size
                 
-                if let glyphRangeIndex = singleLineInfo.glyphRunsRanges.firstIndex(where: { $0.location == range.location }), CTRunGetStatus(singleLineInfo.glyphRuns[glyphRangeIndex]).contains(.rightToLeft)/* || singleLineInfo.isRTL*/ {
+                if let glyphRangeIndex = singleLineInfo.glyphRunsRanges.firstIndex(where: { $0.location == range.location }), CTRunGetStatus(singleLineInfo.glyphRuns[glyphRangeIndex]).contains(.rightToLeft) {
                     let glyphRun = singleLineInfo.glyphRuns[glyphRangeIndex]
-//                    let runRange = CTRunGetStringRange(glyphRun)
+                    var positions = [CGPoint].init(repeating: .zero, count: 1)
                     
-                    var positions = [CGPoint].init(repeating: .zero, count: 1) //  UnsafeMutablePointer<CGPoint>.allocate(capacity: 1/*runRange.length*/)
-                    
-                    CTRunGetPositions(glyphRun, CFRangeMake(0, /*range.length*/1), &positions)
+                    CTRunGetPositions(glyphRun, CFRangeMake(0, 1), &positions)
                     if range.length > 0 {
                         let pos = positions[0]
                         offsetX = pos.x
                     }
-                    
-//                    positions.deallocate()
                 }
 
                 let collapsedFrame = CGRect(
@@ -509,22 +491,16 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             let width = weight * strokeRegularToSemiboldCoeff
             node?.textStroke = (strokeColor, width)
             node?.cachedLayout?.updateTextStroke((strokeColor, width))
-//            node.textShadowColor = UIColor.red
-            
         } else {
             node?.textStroke = nil
             node?.cachedLayout?.updateTextStroke(nil)
-//            node.textShadowColor = nil
         }
-            
-        guard pow(2, 2) == 4 else { return string }
         
         let reweightString = NSMutableAttributedString(attributedString: string)
         let stringRange = NSRange.init(location: 0, length: reweightString.length)
         // Faking weight with stroke
         if weight > .ulpOfOne {
             if shouldChangeStrokeForReweight {
-//                reweightString.addAttribute(.foregroundColor, value: UIColor.red, range: stringRange)
 //                reweightString.addAttribute(.strokeColor, value: strokeColor, range: stringRange)
                 // Assuming the passed weight varies from actual base value to 1 representing final value (from regular to semibold omitting thinner and thicker values)
 //                let strokeRegularToSemiboldCoeff: CGFloat = 2.0
@@ -550,8 +526,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             node?.extraGlyphSpacing = nil
         }
         
-        // Requesting update
-//        _ = node?.updateLayout(.zero)
+        // Requesting update with textStroke
         node?.contents = nil
         node?.setNeedsDisplay()
         
@@ -572,7 +547,7 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
         switch alignment {
         case .left:
             if isRTL {
-                lineOriginX = containerBounds.width - actualSize.width - extraPadding // - lineExtraOffset
+                lineOriginX = containerBounds.width - actualSize.width - extraPadding
             } else {
                 lineOriginX = 0.0
             }
@@ -586,19 +561,19 @@ final class ExpandablePeerTitleTextNode: ASDisplayNode {
             if isRTL {
                 lineOriginX = (containerBounds.width - limitedSize.width) / 2 - lineExtraOffset
             } else {
-                lineOriginX = (containerBounds.width - limitedSize.width) / 2 // + lineExtraOffset
+                lineOriginX = (containerBounds.width - limitedSize.width) / 2
             }
         case .justified:
             lineOriginX = 0
         case .natural:
             if isRTL {
-                lineOriginX = containerBounds.width - actualSize.width // - lineExtraOffset
+                lineOriginX = containerBounds.width - actualSize.width
             } else {
                 lineOriginX = 0
             }
         default:
             if isRTL {
-                lineOriginX = containerBounds.width - actualSize.width // - lineExtraOffset
+                lineOriginX = containerBounds.width - actualSize.width
             } else {
                 lineOriginX = 0
             }
@@ -628,14 +603,12 @@ struct LayoutLine {
     guard let allLines = CTFrameGetLines(frame) as? [Any], !allLines.isEmpty else { return (linesArray, isTruncated: false) }
     
     // Combine exceeding lines into last line
-//        var lines = [CTLine]()
     let lines = allLines[0..<min(allLines.count, maxNumberOfLines)]
     
     if allLines.count > maxNumberOfLines, let lastLine = lines.last {
         let lineRange: CFRange = CTLineGetStringRange(lastLine as! CTLine)
         let lastVisibleRange = NSRange(location: lineRange.location, length: lineRange.length)
         
-//            let exceedingRange = NSRange(location: lastVisibleRange, length: attStr.length - lastVisibleRange.upperBound)
         let lastLineRangeWithExcess = NSRange(location: lastVisibleRange.location, length: attStr.length - lastVisibleRange.location)
         let lastString = attStr.attributedSubstring(from: lastLineRangeWithExcess)
         
@@ -646,7 +619,7 @@ struct LayoutLine {
         } else {
             firstLines = []
         }
-        // MARK: maybe here runs get broken
+        
         let (lastLines, _) = getLayoutLines(lastString, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
         let lastLine = lastLines.first
             .flatMap { line in
@@ -659,7 +632,7 @@ struct LayoutLine {
         if attStr.length > 0, let stringFont = attStr.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) {
             font = stringFont as! CTFont
         } else {
-            font = UIFont.systemFont(ofSize: 30)
+            font = UIFont.systemFont(ofSize: 30.0)
         }
         
         let fontAscent = CTFontGetAscent(font)
@@ -704,24 +677,21 @@ struct LayoutLine {
 // MARK: - Container
 
 final class ExpandablePeerTitleContainerNode: ASDisplayNode {
-    let invertedContainerNode: ASDisplayNode = ASDisplayNode()
-    
-    var allAlignedBy: AnyHashable?
-    var textSubnodes: [AnyHashable: ExpandablePeerTitleTextNode] = [:]
-    var isTransitioning: Bool = false
-    
-    var trailingFadeIntensity: CGFloat = 0
-    let trailingFadeMaskLayer = CALayer()
-    var lastMainLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout?
-    
-    class GradientFadeMask: CALayer {
+    private final class GradientFadeMask: CALayer {
         let solidArea = CALayer()
         let gradientLayer = CAGradientLayer()
     }
-    var gradientFadeMask = GradientFadeMask()
+    
+    private var allAlignedBy: AnyHashable?
     
     private let fadableContainerNode = ASDisplayNode()
+    private let gradientFadeMask = GradientFadeMask()
+    
     private(set) var accessoryViews: [AnyHashable: UIView] = [:]
+    
+    private(set) var textSubnodes: [AnyHashable: ExpandablePeerTitleTextNode] = [:]
+    var isTransitioning: Bool = false
+    private(set) var lastMainLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout?
     
     func update(states: [AnyHashable: ExpandablePeerTitleTextNodeState], mainState: AnyHashable?, constrainedSize: CGSize, textExpansionFraction: CGFloat, isAvatarExpanded: Bool, needsExpansionLayoutUpdate: Bool, iconPadding: CGFloat, transition: ContainedViewLayoutTransition) -> [AnyHashable: MultiScaleTextLayout] {
         var commonExpandedLayout: ExpandablePeerTitleTextNode.ExpandableTextNodeLayout? = nil
@@ -737,7 +707,6 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         
         for (key, state) in states {
             guard let node = textSubnodes[key], let layout = commonExpandedLayout ?? textSubnodes[key]?.getExpandedLayout(string: state.string, forcedAlignment: isAvatarExpanded ? .left : .center, constrainedSize: constrainedSize, iconPadding: iconPadding) else {
-//                assertionFailure("check")
                 continue
             }
             let size = node.updateIfNeeded(string: state.string, expandedLayout: layout, expansionFraction: textExpansionFraction, needsExpansionLayoutUpdate: needsExpansionLayoutUpdate, extraIconPadding: iconPadding, transition: transition)
@@ -785,11 +754,10 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
               let singleLineInfo = self.textSubnodes[allAlignedBy]?.singleLineInfo ?? getLayoutLines(string, textSize: .init(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).0.first
         else { return }
         
-//        gradientFadeMask = .init()
         let gradientInset: CGFloat = 0
         let gradientRadius: CGFloat = 30
         
-        let solidPartLayer = gradientFadeMask.solidArea // CALayer()
+        let solidPartLayer = gradientFadeMask.solidArea
         solidPartLayer.backgroundColor = UIColor.blue.cgColor
         let solidFrame: CGRect
         if singleLineInfo.isRTL {
@@ -798,16 +766,10 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             solidFrame = CGRect(
                 origin: CGPoint(x: containerWidth - solidWidth, y: 0),
                 size: CGSize(width: safeSolidWidth, height: height))
-//            solidPartLayer.frame = CGRect(
-//                origin: CGPoint(x: containerWidth - solidWidth, y: 0),
-//                size: CGSize(width: safeSolidWidth, height: height))
         } else {
             solidFrame = CGRect(
                 origin: .zero,
                 size: CGSize(width: solidWidth + gradientInset, height: height))
-//            solidPartLayer.frame = CGRect(
-//                origin: .zero,
-//                size: CGSize(width: solidWidth + gradientInset, height: height))
         }
         if solidPartLayer.superlayer == nil {
             gradientFadeMask.addSublayer(solidPartLayer)
@@ -815,7 +777,7 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         
         transition.updateFrame(layer: solidPartLayer, frame: solidFrame)
         
-        let gradientLayer = gradientFadeMask.gradientLayer // CAGradientLayer()
+        let gradientLayer = gradientFadeMask.gradientLayer
         gradientLayer.colors = [UIColor.blue.cgColor, UIColor.clear.cgColor]
         
         let gradientFrame: CGRect
@@ -824,13 +786,11 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             gradientLayer.startPoint = CGPoint(x: 1, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 0, y: 0.5)
             gradientFrame = CGRect(x: solidPartLayer.frame.minX - gradientRadius, y: 0, width: gradientRadius, height: height)
-//            gradientLayer.frame = CGRect(x: solidPartLayer.frame.minX - gradientRadius, y: 0, width: gradientRadius, height: height)
         } else {
             gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
             var adjustmentCoof: CGFloat { 1.0 }
             gradientFrame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius * adjustmentCoof, height: height)
-//            gradientLayer.frame = CGRect(x: solidWidth + gradientInset, y: 0, width: gradientRadius * adjustmentCoof, height: height)
         }
         
         transition.updateFrame(layer: gradientLayer, frame: gradientFrame)
@@ -845,7 +805,6 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
             offsetX = 0
         }
         transition.updateFrame(layer: gradientFadeMask, frame: CGRect(x: -containerWidth / 2 + offsetX + offset, y: -height / 2, width: 0.0, height: height))
-//        gradientFadeMask.frame = CGRect(x: -containerWidth / 2 + offsetX + offset, y: -height / 2, width: 0.0, height: height)
         fadableContainerNode.layer.mask = gradientFadeMask
     }
     
@@ -861,16 +820,10 @@ final class ExpandablePeerTitleContainerNode: ASDisplayNode {
         super.init()
         
         addSubnode(fadableContainerNode)
-        fadableContainerNode.addSubnode(invertedContainerNode)
         
         let orderedNodes: [ExpandablePeerTitleTextNode]
         if let order {
             orderedNodes = self.textSubnodes.sorted(by: { a, b in order[a.key] ?? -1 < order[b.key] ?? -1 }).map(\.value)
-            //        let order: [Int: Int] = [
-            //            0: 0,
-            //            2: 1,
-            //            1: 2
-            //        ]
         } else {
             orderedNodes = self.textSubnodes.map(\.value)
         }
